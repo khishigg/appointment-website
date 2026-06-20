@@ -14,6 +14,7 @@ export default function BookingDetails() {
     const {
         isBookingDetailsOpen,
         closeBookingDetails,
+        selectedClinic,
         selectedBranch,
         selectedTimeSlot,
         selectedService,
@@ -104,6 +105,7 @@ export default function BookingDetails() {
                         {step === 3 ? (
                             <SummaryHeader
                                 patientInfo={patientInfo}
+                                selectedClinic={selectedClinic}
                                 selectedService={selectedService}
                                 selectedBranch={selectedBranch}
                                 selectedTimeSlot={selectedTimeSlot}
@@ -112,7 +114,7 @@ export default function BookingDetails() {
                             /* Default Header for Steps 1-2 */
                             <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
                                 <h2 className="flex-1 text-center text-base font-semibold text-gray-800 pr-8">
-                                    Эмнэлгийн нэр
+                                    {selectedClinic?.name || 'Эмнэлгийн нэр'}
                                 </h2>
                             </div>
                         )}

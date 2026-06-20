@@ -13,10 +13,11 @@ const initialState = {
     currentStep: 1, // 1: Branch, 2: Doctor, 3: Service, 4: Time, 5: Confirmation
 
     // Selected entities
+    selectedClinic: null,      // { id, name }
     selectedBranch: null,      // { id, name, address, phone, ... }
-    selectedDoctor: null,      // { id, name, specialty, image, rating, ... }
+    selectedDoctor: null,      // { id, clinicId, clinicNum, provNum, name, ... }
     selectedService: null,     // { id, name, price, duration, ... }
-    selectedTimeSlot: null,    // { date, time, formattedDate, ... }
+    selectedTimeSlot: null,    // { apiDate, time, operatoryNum, opName, rawSlot, ... }
 
     patientInfo: {
         firstName: '',
@@ -52,6 +53,10 @@ export const useBookingStore = create(
             })),
 
             // ============ SELECTION ACTIONS ============
+            setSelectedClinic: (clinic) => set({
+                selectedClinic: clinic,
+            }),
+
             selectBranch: (branch) => set({
                 selectedBranch: branch,
                 // Reset downstream selections when branch changes
@@ -106,6 +111,7 @@ export const useBookingStore = create(
             getBookingSummary: () => {
                 const state = get();
                 return {
+                    clinic: state.selectedClinic?.name || 'Сонгогдоогүй',
                     branch: state.selectedBranch?.name || 'Сонгогдоогүй',
                     doctor: state.selectedDoctor?.name || 'Сонгогдоогүй',
                     service: state.selectedService?.name || 'Сонгогдоогүй',

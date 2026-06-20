@@ -3,9 +3,10 @@ import { FaMapMarkerAlt, FaLocationArrow } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiX, FiFilter, FiMapPin } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import Button from "./ui/Button";
 import Input from "./ui/Input";
 import MapDiscoveryModal from "./MapDiscoveryModal";
+import { getClinics } from "../api/clinics";
+import { isAdminRole, useAuthStore } from "../store/AuthStore";
 
 const aimags = [
   "Архангай", "Баян-Өлгий", "Баянхонгор", "Булган", "Говь-Алтай",
@@ -42,20 +43,63 @@ const mockResults = [
   { id: 25, name: "Улсын Нэгдүгээр Төв Эмнэлэг", logo: "🏥", city: "Улаанбаатар", district: "Сүхбаатар" },
 ];
 
-const categories = [
-  {
-    title: "Түгээмэл мэргэжлүүд",
-    items: ["Өрхийн эмч", "Эх барих эмэгтэйчүүдийн эмч", "Арьс судлаач", "Шүдний эмч", "Чих хамар хоолой", "Нүдний эмч", "Сэтгэцийн эмч"]
-  },
-  {
-    title: "Бусад мэргэжлүүд",
-    items: ["Бариа засалч", "Харшлын эмч", "Сонсголын эмч", "Зүрхний эмч", "Зүрх цээжний мэс засалч", "Нугасны эмч", "Гэдэсний мэс засалч", "Шүдний эмч", "Арьс судлаач", "Хоол зүйч"]
-  }
-];
-
 import { createPortal } from "react-dom";
 
-const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
+const normalizeTenant = (tenant) => {
+  const name = tenant.name ?? tenant.Name ?? "Нэргүй эмнэлэг";
+
+  return {
+    id: tenant.id ?? tenant.Id,
+    name,
+    logo: name.trim().charAt(0).toUpperCase() || "Э",
+  };
+};
+
+const getItemMeta = (item, isAdmin) => {
+  if (isAdmin) return null;
+
+  return item.city === "Улаанбаатар"
+    ? `${item.city}, ${item.district}`
+    : `${item.province}`;
+};
+
+const openHospital = ({ navigate, item, isAdmin, onClose, setQuery }) => {
+  setQuery("");
+  navigate(
+    isAdmin ? `/booking?clinicId=${encodeURIComponent(item.id)}` : "/booking",
+    { state: { hospital: item } }
+  );
+  onClose();
+};
+
+const SearchResultsState = ({ isLoading, error, onRetry }) => {
+  if (isLoading) {
+    return <div className="tenant-search-state">Эмнэлгийн жагсаалтыг уншиж байна...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="tenant-search-state tenant-search-state--error" role="alert">
+        <span>{error}</span>
+        <button type="button" onClick={onRetry}>Дахин оролдох</button>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const MobileSearchOverlay = ({
+  isOpen,
+  onClose,
+  query,
+  setQuery,
+  items,
+  isAdmin,
+  isLoading,
+  error,
+  onRetry,
+}) => {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState('all'); // 'all', 'city', 'locality'
   const [selectedAimag, setSelectedAimag] = useState("Бүх аймаг");
@@ -81,12 +125,7 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  return createPortal(
+    return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -113,16 +152,18 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
           />
         </div>
 
-        <button
-          onClick={() => setShowAimagDropdown(!showAimagDropdown)}
-          className="search-modal-filter-btn"
-        >
-          <FiFilter size={24} />
-        </button>
+        {!isAdmin && (
+          <button
+            onClick={() => setShowAimagDropdown(!showAimagDropdown)}
+            className="search-modal-filter-btn"
+          >
+            <FiFilter size={24} />
+          </button>
+        )}
 
         {/* Aimag Dropdown Overlay */}
         <AnimatePresence>
-          {showAimagDropdown && (
+          {!isAdmin && showAimagDropdown && (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -159,21 +200,23 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
         </AnimatePresence>
       </div>
 
-      <div className="search-modal-chips-container no-scrollbar">
-        {[
-          { id: 'all', label: 'Бүгд' },
-          { id: 'city', label: 'Улаанбаатар' },
-          { id: 'locality', label: 'Орон нутаг' },
-        ].map((chip) => (
-          <button
-            key={chip.id}
-            onClick={() => setFilterType(chip.id)}
-            className={`search-modal-chip ${filterType === chip.id ? 'active' : ''}`}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
+      {!isAdmin && (
+        <div className="search-modal-chips-container no-scrollbar">
+          {[
+            { id: 'all', label: 'Бүгд' },
+            { id: 'city', label: 'Улаанбаатар' },
+            { id: 'locality', label: 'Орон нутаг' },
+          ].map((chip) => (
+            <button
+              key={chip.id}
+              onClick={() => setFilterType(chip.id)}
+              className={`search-modal-chip ${filterType === chip.id ? 'active' : ''}`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <motion.div
         variants={containerVariants}
@@ -182,9 +225,15 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
         className="hospital-list-container no-scrollbar"
       >
         <div className="flex flex-col">
-          {mockResults
+          <SearchResultsState
+            isLoading={isLoading}
+            error={error}
+            onRetry={onRetry}
+          />
+          {!isLoading && !error && items
             .filter(item => {
               const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase());
+              if (isAdmin) return matchesQuery;
               if (filterType === 'all') return matchesQuery;
               if (filterType === 'city') return matchesQuery && item.city === 'Улаанбаатар';
               if (filterType === 'locality') {
@@ -197,9 +246,7 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
               <button
                 key={item.id}
                 onClick={() => {
-                  setQuery("");
-                  navigate("/booking", { state: { hospital: item } });
-                  onClose();
+                  openHospital({ navigate, item, isAdmin, onClose, setQuery });
                 }}
                 className="hospital-list-item"
               >
@@ -211,12 +258,17 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
                   <div className="hospital-item-name">
                     {item.name}
                   </div>
-                  <div className="hospital-item-meta">
-                    {item.city === 'Улаанбаатар' ? `${item.city}, ${item.district}` : `${item.province}`}
-                  </div>
+                  {!isAdmin ? (
+                    <div className="hospital-item-meta">
+                      {getItemMeta(item, isAdmin)}
+                    </div>
+                  ) : null}
                 </div>
               </button>
             ))}
+          {!isLoading && !error && items.length === 0 && (
+            <div className="tenant-search-state">Эмнэлэг олдсонгүй.</div>
+          )}
         </div>
       </motion.div>
     </motion.div>,
@@ -224,7 +276,17 @@ const MobileSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
   );
 };
 
-const PremiumSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
+const PremiumSearchOverlay = ({
+  isOpen,
+  onClose,
+  query,
+  setQuery,
+  items,
+  isAdmin,
+  isLoading,
+  error,
+  onRetry,
+}) => {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState('all'); // 'all', 'city', 'locality'
 
@@ -249,8 +311,9 @@ const PremiumSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
     visible: { opacity: 1, y: 0 }
   };
 
-  const filteredItems = mockResults.filter(item => {
+  const filteredItems = items.filter(item => {
     const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase());
+    if (isAdmin) return matchesQuery;
     if (filterType === 'all') return matchesQuery;
     if (filterType === 'city') return matchesQuery && item.city === 'Улаанбаатар';
     if (filterType === 'locality') return matchesQuery && item.city === 'Орон нутаг';
@@ -288,55 +351,63 @@ const PremiumSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
 
         <div className="search-premium-content no-scrollbar">
           {/* 📍 Location Filter Chips (Desktop Version) */}
-          <motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
-            {[
-              { id: 'all', label: 'Бүгд' },
-              { id: 'city', label: 'Улаанбаатар' },
-              { id: 'locality', label: 'Орон нутаг' },
-              { id: 'others', label: 'Бусад' },
-            ].map((chip) => (
-              <button
-                key={chip.id}
-                onClick={() => setFilterType(chip.id)}
-                className={`px-5 py-2.5 rounded-full text-[12px] font-bold transition-all border ${filterType === chip.id
-                  ? 'bg-[#007AFF] text-white border-transparent shadow-md'
-                  : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'
-                  }`}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </motion.div>
+          {!isAdmin && (
+            <motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
+              {[
+                { id: 'all', label: 'Бүгд' },
+                { id: 'city', label: 'Улаанбаатар' },
+                { id: 'locality', label: 'Орон нутаг' },
+                { id: 'others', label: 'Бусад' },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  onClick={() => setFilterType(chip.id)}
+                  className={`px-5 py-2.5 rounded-full text-[12px] font-bold transition-all border ${filterType === chip.id
+                    ? 'bg-[#007AFF] text-white border-transparent shadow-md'
+                    : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'
+                    }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
           {/* 
           <motion.div variants={itemVariants} className="search-section-title">
             {query.length > 0 ? 'Хайлтын үр дүн' : 'Онцлох эмнэлгүүд'}
           </motion.div> */}
 
-          {filteredItems.length > 0 ? (
+          <SearchResultsState
+            isLoading={isLoading}
+            error={error}
+            onRetry={onRetry}
+          />
+          {!isLoading && !error && filteredItems.length > 0 ? (
             <div className="search-popular-grid">
               {filteredItems.slice(0, 10).map((item) => (
                 <motion.div
                   key={item.id}
                   variants={itemVariants}
                   onClick={() => {
-                    navigate("/booking", { state: { hospital: item } });
-                    onClose();
+                    openHospital({ navigate, item, isAdmin, onClose, setQuery });
                   }}
                   className="search-popular-card"
                 >
                   <div className="search-popular-logo">{item.logo}</div>
                   <div>
                     <div className="search-popular-name">{item.name}</div>
-                    <div className="search-popular-type">{item.city === 'Улаанбаатар' ? `${item.city}, ${item.district}` : `${item.province}`}</div>
+                    {!isAdmin ? (
+                      <div className="search-popular-type">{getItemMeta(item, isAdmin)}</div>
+                    ) : null}
                   </div>
                 </motion.div>
               ))}
             </div>
-          ) : (
+          ) : !isLoading && !error ? (
             <div className="py-10 text-center text-gray-400 font-medium">
               Ийм эмнэлэг олдсонгүй
             </div>
-          )}
+          ) : null}
         </div>
       </motion.div>
     </div>,
@@ -345,14 +416,59 @@ const PremiumSearchOverlay = ({ isOpen, onClose, query, setQuery }) => {
 };
 
 export default function SearchBar() {
+  const role = useAuthStore((state) => state.role);
+  const isAdmin = isAdminRole(role);
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [showPremiumOverlay, setShowPremiumOverlay] = useState(false);
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [adminTenants, setAdminTenants] = useState([]);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
+  const [tenantsError, setTenantsError] = useState("");
+  const [tenantReloadKey, setTenantReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setAdminTenants([]);
+      setIsLoadingTenants(false);
+      setTenantsError("");
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setIsLoadingTenants(true);
+    setTenantsError("");
+
+    getClinics({ signal: controller.signal })
+      .then((data) => {
+        const tenants = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setAdminTenants(tenants.map(normalizeTenant));
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setAdminTenants([]);
+          setTenantsError(error.message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoadingTenants(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [isAdmin, tenantReloadKey]);
+
+  const searchItems = isAdmin ? adminTenants : mockResults;
+  const retryTenants = () => setTenantReloadKey((value) => value + 1);
 
   const handleSearch = () => {
-    alert(`Хайлт: ${query}, Байршил: ${location}`);
+    if (window.innerWidth < 768) {
+      setShowMobileOverlay(true);
+    } else {
+      setShowPremiumOverlay(true);
+    }
   };
 
   return (
@@ -373,7 +489,7 @@ export default function SearchBar() {
                   setShowPremiumOverlay(true);
                 }
               }}
-              readOnly={window.innerWidth >= 0} // Always open overlay for unified feel
+              readOnly // Always open overlay for unified feel
               className="search-main-input border-0 shadow-none ps-0 cursor-pointer"
               containerClassName="mb-0 w-100"
               style={{ fontSize: "1rem" }}
@@ -417,6 +533,11 @@ export default function SearchBar() {
             onClose={() => setShowMobileOverlay(false)}
             query={query}
             setQuery={setQuery}
+            items={searchItems}
+            isAdmin={isAdmin}
+            isLoading={isLoadingTenants}
+            error={tenantsError}
+            onRetry={retryTenants}
           />
         )}
         {showPremiumOverlay && (
@@ -425,6 +546,11 @@ export default function SearchBar() {
             onClose={() => setShowPremiumOverlay(false)}
             query={query}
             setQuery={setQuery}
+            items={searchItems}
+            isAdmin={isAdmin}
+            isLoading={isLoadingTenants}
+            error={tenantsError}
+            onRetry={retryTenants}
           />
         )}
         {showMapModal && (
@@ -437,3 +563,4 @@ export default function SearchBar() {
     </>
   );
 }
+

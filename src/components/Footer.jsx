@@ -3,6 +3,7 @@ import { FaMapMarkerAlt, FaEnvelope, FaPhoneAlt, FaMobileAlt } from "react-icons
 import { FaFacebookF } from 'react-icons/fa';
 import { FaTwitter } from 'react-icons/fa6';
 import { FaInstagram } from 'react-icons/fa';
+import mapImage from "../assets/map.png";
 
 export default function Footer() {
   return (
@@ -49,7 +50,7 @@ export default function Footer() {
           <Col md={3} sm={6}>
             <h5 className="footer-title">Газрын зураг</h5>
             <img
-              src="src/assets/map.png"
+              src={mapImage}
               alt="Branches Map"
               className="img-fluid rounded shadow-sm"
               style={{backgroundColor : ' rgba(0, 130, 200, 0.9)'}}
