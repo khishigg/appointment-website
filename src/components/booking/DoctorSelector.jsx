@@ -12,7 +12,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBookingStore } from '../../store/BookingStore';
 import { addDays, formatApiDate, getDoctorFreeTimeSlots, resolveDoctorProvNum } from '../../api/appointments';
 import genericDoctorImage from '../../assets/doctorImage.png';
-import TimeSlotModal from './TimeSlotModal';
 
 // Mock data reflecting the Zocdoc structure
 const defaultDoctors = [
@@ -99,33 +98,24 @@ export default function DoctorSelector({
         selectDoctor,
         selectedBranch,
         selectedTimeSlot,
-        openTimeSlotModal
+        openTimeSlotModal,
+        availabilityRefreshKey,
     } = useBookingStore();
     const [expandedBios, setExpandedBios] = useState({});
 
-    // Filtering logic based on selected branch
+    // Admin горимд backend аль хэдийн салбараар шүүсэн жагсаалт буцаадаг тул клиент талд
+    // дахин шүүхгүй (clinicNum ба tenant id-г хольж харьцуулах алдаа ингэж арилна).
+    // Mock (non-admin) өгөгдөл дээр л branchIds-аар шүүнэ.
+    // provNum-гүй эмч байвал availability дуудах боломжгүй тул жагсаалтаас алгасна.
     const filteredDoctors = isAdmin
-        ? doctors
-        : selectedBranch
-            ? doctors.filter(doc => doc.branchIds?.includes(selectedBranch.id))
-            : doctors;
+        ? doctors.filter((doc) => resolveDoctorProvNum(doc) != null)
+        : (selectedBranch
+            ? doctors.filter((doc) => doc.branchIds?.includes(selectedBranch.id))
+            : doctors);
 
     const toggleBio = (id) => {
         setExpandedBios(prev => ({ ...prev, [id]: !prev[id] }));
     };
-
-    if (isAdmin && !selectedBranch) {
-        return (
-            <div className="bg-white">
-                <div className="px-4 md:px-6 pt-4 pb-2">
-                    <h2 className="text-base font-semibold text-gray-800">
-                        Эмч харахын тулд салбар сонгоно уу
-                    </h2>
-                </div>
-                <div className="booking-data-state">Салбар сонгоогүй байна.</div>
-            </div>
-        );
-    }
 
     if (isAdmin && isLoading) {
         return <div className="booking-data-state">Эмчийн жагсаалтыг уншиж байна...</div>;
@@ -141,10 +131,10 @@ export default function DoctorSelector({
     }
 
     return (
-        <div className="bg-white">
+        <div className="bg-surface">
             {/* Header with count */}
             <div className="px-4 md:px-6 pt-4 pb-2">
-                <h2 className="text-base font-semibold text-gray-800">
+                <h2 className="text-base font-semibold text-heading">
                     {selectedBranch
                         ? `${selectedBranch.name}-н эмч нар (${filteredDoctors.length})`
                         : `Бүх эмч нар (${filteredDoctors.length})`}
@@ -153,11 +143,13 @@ export default function DoctorSelector({
 
             {isAdmin && filteredDoctors.length === 0 ? (
                 <div className="booking-data-state">
-                    Энэ салбарт бүртгэлтэй эмч олдсонгүй.
+                    {selectedBranch
+                        ? 'Энэ салбарт бүртгэлтэй эмч олдсонгүй.'
+                        : 'Эмнэлэгт бүртгэлтэй эмч олдсонгүй.'}
                 </div>
             ) : null}
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-line-soft">
                 {filteredDoctors.map((doctor) => {
                     const isBioExpanded = expandedBios[doctor.id];
                     const displayImage = isAdmin ? genericDoctorImage : doctor.image;
@@ -167,12 +159,12 @@ export default function DoctorSelector({
                     const displayBio = isAdmin ? GENERIC_DOCTOR_BIO : doctor.bio;
 
                     return (
-                        <div key={doctor.id} className="p-4 md:p-6 transition-colors hover:bg-gray-50/20">
+                        <div key={doctor.id} className="p-4 md:p-6 transition-colors hover:bg-hover-surface/20">
                             {/* --- Header: Avatar + Info --- */}
                             <div className="flex gap-3">
                                 {/* Avatar: Square with rounded corners */}
                                 <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
-                                    <div className="w-full h-full rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                                    <div className="w-full h-full rounded-xl overflow-hidden border border-line-soft shadow-sm">
                                         <img
                                             src={displayImage}
                                             alt={doctor.name}
@@ -183,10 +175,10 @@ export default function DoctorSelector({
 
                                 {/* Doc Info */}
                                 <div className="flex-1 min-w-0 flex flex-col ">
-                                    <h3 className="text-base md:text-[17px] font-bold text-gray-900 leading-tight">
+                                    <h3 className="text-base md:text-[17px] font-bold text-ink leading-tight">
                                         {doctor.name}
                                     </h3>
-                                    <p className="text-[13px] text-gray-500 leading-tight">{displaySpecialty}</p>
+                                    <p className="text-body-sm text-muted leading-tight">{displaySpecialty}</p>
 
                                     {/* Collapsible Bio */}
                                     <div className="mt-0.5">
@@ -195,7 +187,7 @@ export default function DoctorSelector({
                                             onClick={(e) => { if (!isBioExpanded) { e.stopPropagation(); toggleBio(doctor.id); } }}
                                         >
                                             <p
-                                                className={`text-[13px] text-gray-600 leading-normal ${!isBioExpanded ? 'line-clamp-2' : ''}`}
+                                                className={`text-body-sm text-muted leading-normal ${!isBioExpanded ? 'line-clamp-2' : ''}`}
                                             >
                                                 {displayBio}
                                                 {isBioExpanded && (
@@ -203,7 +195,7 @@ export default function DoctorSelector({
                                                         type="button"
 
                                                         onClick={(e) => { e.stopPropagation(); toggleBio(doctor.id); }}
-                                                        className="text-[12px] text-amber-600 hover:text-amber-700 font-bold ml-1.5 inline-block align-baseline transition-colors"
+                                                        className="text-caption text-amber-600 hover:text-amber-700 font-bold ml-1.5 inline-block align-baseline transition-colors"
                                                     >
                                                         хураах
                                                     </button>
@@ -213,7 +205,7 @@ export default function DoctorSelector({
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); toggleBio(doctor.id); }}
-                                                    className="absolute bottom-0 right-0 z-40 bg-gradient-to-l from-white via-white to-transparent pl-10 pr-0.5 text-gray-500 font-bold hover:text-amber-600 transition-colors text-[13px] leading-normal h-[1.2rem] flex items-center cursor-pointer"
+                                                    className="absolute bottom-0 right-0 z-40 bg-gradient-to-l from-white via-white to-transparent pl-10 pr-0.5 text-muted font-bold hover:text-amber-600 transition-colors text-body-sm leading-normal h-[1.2rem] flex items-center cursor-pointer"
                                                 >
 
                                                 </button>
@@ -227,25 +219,26 @@ export default function DoctorSelector({
                             <div className="mt-2">
                                 <div className="flex items-center justify-between mb-3 px-1">
                                     <div className="flex items-center gap-2">
-                                        <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        <span className="text-[14px] font-bold text-gray-700">Боломжит цаг</span>
+                                        <span className="text-body font-bold text-heading">Боломжит цаг</span>
                                     </div>
                                     <button
                                         onClick={() => {
                                             selectDoctor(doctor);
                                             openTimeSlotModal();
                                         }}
-                                        className="text-[13px] font-semibold text-gray-800 hover:text-amber-600"
+                                        className="text-body-sm font-semibold text-heading hover:text-amber-600"
                                     >
                                         See all
                                     </button>
                                 </div>
 
-                                <DoctorAvailability 
+                                <DoctorAvailability
                                     doctor={doctor}
                                     lazy={isAdmin}
+                                    refreshKey={availabilityRefreshKey}
                                     selectDoctor={selectDoctor} 
                                     openTimeSlotModal={openTimeSlotModal}
                                     selectedDoctor={selectedDoctor}
@@ -256,9 +249,6 @@ export default function DoctorSelector({
                     );
                 })}
             </div>
-
-            {/* Detailed Time Slot Selection Modal */}
-            <TimeSlotModal />
         </div >
     );
 }
@@ -266,6 +256,7 @@ export default function DoctorSelector({
 const DoctorAvailability = ({
     doctor,
     lazy = false,
+    refreshKey = 0,
     selectDoctor,
     openTimeSlotModal,
     selectedDoctor,
@@ -357,12 +348,12 @@ const DoctorAvailability = ({
         fetchAvailability();
 
         return () => controller.abort();
-    }, [doctor, hasEnteredViewport, reloadKey]);
+    }, [doctor, hasEnteredViewport, refreshKey, reloadKey]);
 
     return (
         <div ref={containerRef}>
             {availabilityError ? (
-                <div className="flex min-h-24 flex-col items-center justify-center gap-2 px-3 py-4 text-center text-sm font-medium text-red-700">
+                <div className="flex min-h-24 flex-col items-center justify-center gap-2 px-3 py-4 text-center text-sm font-medium text-danger-text">
                     <span>{availabilityError}</span>
                     <button
                         type="button"
@@ -374,7 +365,7 @@ const DoctorAvailability = ({
                 </div>
             ) : null}
             {!availabilityError ? (
-                <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x pb-1 px-1">
+                <div className="flex gap-2.5 overflow-x-auto max-md:no-scrollbar snap-x pb-1 px-1 md:grid md:grid-cols-4 md:gap-2 md:overflow-visible md:snap-none">
             {availability.map((slot, idx) => {
                 const availableCount = slot.availableCount ?? 0;
                 const isDisabled = slot.isLoading || availableCount === 0;
@@ -391,26 +382,39 @@ const DoctorAvailability = ({
                             openTimeSlotModal(slot.apiDate);
                         }}
                         className={`
-                            snap-start flex flex-col items-center justify-center min-w-[105px] h-[95px] rounded-lg transition-all
+                            snap-start flex flex-col items-center justify-center min-w-[105px] md:min-w-0 h-[95px] md:h-[88px] rounded-lg border transition-all
                             ${isDisabled
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                ? 'bg-canvas text-faint border-transparent cursor-not-allowed'
                                 : isSlotSelected
-                                    ? 'bg-[#FFFFFF] border-2 border-gray-900 shadow-md transform scale-[1.02]'
-                                    : 'bg-[#FFFFFF] hover:bg-gray-50 text-gray-900 shadow-sm'}
+                                    ? 'bg-availability text-ink border-selected-border ring-2 ring-selected-border shadow-md transform scale-[1.02]'
+                                    : 'bg-availability text-ink border-transparent hover:bg-availability-hover active:scale-95 shadow-sm'}
                         `}
                     >
-                        <span className="text-[14px] font-semibold leading-tight">
+                        <span className="text-body font-semibold leading-tight">
                             {slot.day}
                         </span>
-                        <span className="text-[13px] opacity-80 mt-0.5">
+                        <span className="text-body-sm opacity-80 mt-0.5">
                             {slot.date}
                         </span>
-                        <span className="text-[13px] text-amber-500 font-bold mt-1.5">
+                        <span className="text-body-sm font-bold mt-1.5">
                             {slot.isLoading ? 'Шалгаж байна' : availableCount > 0 ? `${availableCount} цаг` : 'Байхгүй'}
                         </span>
                     </button>
                 );
             })}
+
+            {/* "more" — 4-баганат grid-ийн 8 дахь нүд (7 өдөр + more). Бүх боломжит цагийг
+                нээнэ. Mobile-д хэрэггүй: тэнд хэвтээ гүйлгэлт өөрөө бүх өдрийг харуулна. */}
+            <button
+                type="button"
+                onClick={() => {
+                    selectDoctor(doctor);
+                    openTimeSlotModal();
+                }}
+                className="hidden md:flex h-[95px] md:h-[88px] items-center justify-center rounded-lg border border-line bg-surface text-body-sm font-semibold text-heading transition-all hover:bg-hover-surface active:scale-95"
+            >
+                more
+            </button>
                 </div>
             ) : null}
         </div>

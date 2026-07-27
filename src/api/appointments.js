@@ -1,4 +1,4 @@
-import { getProviderAvailability } from './clinics';
+import { createAppointment, getProviderAvailability } from './clinics';
 
 const DEFAULT_API_BASE_URL = 'https://localhost:7161';
 const DEFAULT_SLOT_DURATION = 30;
@@ -22,23 +22,6 @@ const getJwtPayload = (token) => {
     } catch {
         return null;
     }
-};
-
-export const getAuthenticatedProvNum = () => {
-    const auth = getStoredAuth();
-    const tokenPayload = auth?.token ? getJwtPayload(auth.token) : null;
-
-    return (
-        tokenPayload?.ProvNum ??
-        tokenPayload?.provNum ??
-        tokenPayload?.ProviderNum ??
-        tokenPayload?.providerNum ??
-        auth?.user?.ProvNum ??
-        auth?.user?.provNum ??
-        auth?.user?.ProviderNum ??
-        auth?.user?.providerNum ??
-        null
-    );
 };
 
 const buildAuthHeaders = () => {
@@ -71,6 +54,8 @@ export const addDays = (date, days) => {
     return nextDate;
 };
 
+// Эмчийн provNum-ыг ЗӨВХӨН эмчийн бүртгэлээс уншина. Нэвтэрсэн хэрэглэгчийн ProvNum руу
+// хэзээ ч уначихгүй — тэгвэл өөр эмчийн сул цаг харагдана.
 const getDoctorProvNum = ({ doctor, doctorProvNum, provNum }) => {
     return (
         doctorProvNum ??
@@ -79,7 +64,6 @@ const getDoctorProvNum = ({ doctor, doctorProvNum, provNum }) => {
         doctor?.ProvNum ??
         doctor?.providerNum ??
         doctor?.ProviderNum ??
-        getAuthenticatedProvNum() ??
         null
     );
 };
@@ -91,6 +75,23 @@ const getClinicId = ({ doctor, clinicId }) =>
 
 const getClinicNum = ({ doctor, clinicNum }) =>
     clinicNum ?? doctor?.clinicNum ?? doctor?.ClinicNum ?? null;
+
+// Захиалгын payload-д орох clinicNum. Эмч нэг салбарт харьяалагддаг тул эмчийн өөрийнх нь
+// clinicNum тэргүүн эрхтэй; байхгүй үед л сонгосон салбараас авна. Аль нь ч байхгүй бол null
+// буцаана — тэр үед payload-аас clinicNum-ыг БҮРМӨСӨН орхиж, серверт өөрөө нөхүүлнэ.
+export const resolveBookingClinicNum = ({ doctor, branch } = {}) => {
+    const value =
+        doctor?.clinicNum ??
+        doctor?.ClinicNum ??
+        branch?.clinicNum ??
+        branch?.ClinicNum ??
+        null;
+
+    if (value === null || value === undefined || value === '') return null;
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+};
 
 const buildAvailableAppointmentsUrl = ({ doctor, doctorProvNum, provNum, startDate, endDate, slotDuration }) => {
     const url = new URL('/api/Appointments/available', apiBaseUrl);
@@ -142,6 +143,10 @@ const parseSlotDate = (slot) => {
     );
 };
 
+// Сервер timezone тэмдэглэгээгүй орон нутгийн цаг буцаадаг ("2026-07-24T09:30:00").
+// Дэлгэцэнд харуулахдаа энэ мөрийг орон нутгийн цаг гэж уншина ('Z' нэмэхгүй, UTC руу хөрвүүлэхгүй).
+export const parseLocalDateTime = (value) => parseSlotDate(value);
+
 const formatSlotTime = (date) => {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
@@ -173,17 +178,20 @@ export async function getAvailableAppointments({
     const selectedClinicId = getClinicId({ doctor, clinicId });
     const selectedClinicNum = getClinicNum({ doctor, clinicNum });
 
-    if (selectedClinicId != null && selectedClinicNum != null) {
+    if (selectedClinicId != null) {
         if (providerNum === undefined || providerNum === null || providerNum === '') {
             throw new Error('Сул цаг шалгах эмчийн provNum олдсонгүй.');
         }
 
-        const data = await getProviderAvailability(
-            selectedClinicId,
-            selectedClinicNum,
-            providerNum,
-            { startDate, endDate, slotDuration, signal }
-        );
+        // clinicNum null үед салбаргүй горим — бүх салбарын сул цагийн нэгдэл буцна.
+        const data = await getProviderAvailability(selectedClinicId, providerNum, {
+            clinicNum: selectedClinicNum,
+            startDate,
+            endDate,
+            slotDuration,
+            signal,
+        });
+
         return normalizeAvailableResponse(data);
     }
 
@@ -213,6 +221,94 @@ export async function getAvailableAppointments({
 }
 
 export const fetchAvailableAppointments = getAvailableAppointments;
+
+const toNumberOrNull = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+// GET /api/clinics/{clinicId}/products хариуг нэгтгэнэ (camelCase / PascalCase хоёуланг уншина).
+export const normalizeProduct = (product = {}) => {
+    const productId = toNumberOrNull(product.productId ?? product.ProductId ?? product.id ?? product.Id);
+    const name = product.productName ?? product.ProductName ?? product.name ?? product.Name ?? '';
+    const durationMinutes = toNumberOrNull(product.durationMinutes ?? product.DurationMinutes);
+    const price = toNumberOrNull(product.price ?? product.Price);
+
+    return {
+        id: productId != null ? String(productId) : name,
+        productId,
+        name: name || `Үйлчилгээ #${productId ?? ''}`.trim(),
+        description: product.description ?? product.Description ?? '',
+        durationMinutes,
+        price,
+    };
+};
+
+// POST /api/clinics/{clinicId}/appointments-ийн body-г FE state-ээс угсарна.
+// aptDateTime нь availability-ийн rawSlot мөр — ЯГ ТЭР ХЭВЭЭР нь илгээнэ.
+export const buildAppointmentPayload = ({ doctor, branch, timeSlot, service, patientInfo } = {}) => {
+    const provNum = resolveDoctorProvNum(doctor);
+    const operatoryNum = timeSlot?.operatoryNum ?? null;
+    const aptDateTime = timeSlot?.rawSlot ?? null;
+    const productId = service?.productId ?? null;
+
+    if (provNum === null || provNum === undefined || provNum === '') {
+        throw new Error('Эмч сонгогдоогүй байна.');
+    }
+
+    if (operatoryNum === null || operatoryNum === undefined) {
+        throw new Error('Сонгосон цагийн өрөө (operatoryNum) олдсонгүй. Цагаа дахин сонгоно уу.');
+    }
+
+    if (typeof aptDateTime !== 'string' || !aptDateTime) {
+        throw new Error('Сонгосон цаг олдсонгүй. Цагаа дахин сонгоно уу.');
+    }
+
+    if (productId === null || productId === undefined) {
+        throw new Error('Үйлчилгээ сонгогдоогүй байна.');
+    }
+
+    const payload = {
+        provNum: Number(provNum),
+        operatoryNum: Number(operatoryNum),
+        aptDateTime,
+        productId: Number(productId),
+        firstName: (patientInfo?.firstName ?? '').trim(),
+        lastName: (patientInfo?.lastName ?? '').trim(),
+        phoneNumber: (patientInfo?.phone ?? '').trim(),
+    };
+
+    const email = (patientInfo?.email ?? '').trim();
+    if (email) {
+        payload.email = email;
+    }
+
+    // Салбар тодорхойгүй бол талбарыг ОГТ илгээхгүй — сервер эмчийн салбарыг өөрөө нөхнө.
+    const clinicNum = resolveBookingClinicNum({ doctor, branch });
+    if (clinicNum !== null) {
+        payload.clinicNum = clinicNum;
+    }
+
+    return payload;
+};
+
+export async function bookAppointment({
+    clinicId,
+    doctor,
+    branch,
+    timeSlot,
+    service,
+    patientInfo,
+    signal,
+} = {}) {
+    if (clinicId === null || clinicId === undefined || clinicId === '') {
+        throw new Error('Эмнэлэг сонгогдоогүй байна.');
+    }
+
+    const payload = buildAppointmentPayload({ doctor, branch, timeSlot, service, patientInfo });
+    return createAppointment(clinicId, payload, { signal });
+}
 
 export async function getDoctorFreeTimeSlots({
     doctor,

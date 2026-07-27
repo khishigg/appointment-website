@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { FiChevronDown, FiClock } from 'react-icons/fi';
+
+import ServiceCard from './ServiceCard';
+import { formatProductDuration, formatProductPrice } from './productFormat';
 
 const serviceCatalog = [
     {
@@ -44,8 +46,43 @@ const serviceCatalog = [
     },
 ];
 
-export default function ServiceSelector() {
+// Backend-ийн product-ыг энэ компонентын карт бүтэц рүү хөрвүүлнэ.
+// subtitle-д description-ийг ХИЙХГҮЙ — description зөвхөн карт нээгдсэн (expanded) үед гарна.
+const productToService = (product) => ({
+    id: product.id,
+    name: product.name,
+    subtitle: '',
+    duration: formatProductDuration(product.durationMinutes),
+    price: formatProductPrice(product.price),
+    description: product.description || 'Дэлгэрэнгүй мэдээлэл бүртгэгдээгүй байна.',
+});
+
+export default function ServiceSelector({
+    products = null,
+    isLoading = false,
+    error = '',
+    onRetry,
+}) {
     const [openServiceIds, setOpenServiceIds] = useState(() => new Set());
+    // products prop ирсэн үед (admin горим) API өгөгдлийг ашиглана; ирээгүй үед mock каталог.
+    const items = products ? products.map(productToService) : serviceCatalog;
+
+    if (products && isLoading) {
+        return <div className="booking-data-state">Үйлчилгээний жагсаалтыг уншиж байна...</div>;
+    }
+
+    if (products && error) {
+        return (
+            <div className="booking-data-state booking-data-state--error" role="alert">
+                <span>{error}</span>
+                <button type="button" onClick={onRetry}>Дахин оролдох</button>
+            </div>
+        );
+    }
+
+    if (products && items.length === 0) {
+        return <div className="booking-data-state">Бүртгэлтэй үйлчилгээ олдсонгүй.</div>;
+    }
 
     const toggleService = (serviceId) => {
         setOpenServiceIds((current) => {
@@ -60,58 +97,20 @@ export default function ServiceSelector() {
     };
 
     return (
-        <section id="service" className="bg-gray-50 px-4 py-4 md:px-6">
-            <div className="mx-auto flex max-w-md flex-col gap-[14px]">
-                {serviceCatalog.map((service) => {
-                    const isOpen = openServiceIds.has(service.id);
-
-                    return (
-                        <article
-                            key={service.id}
-                            className="min-h-[108px] rounded-[20px] border border-slate-200 bg-white px-4 pt-4 pb-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.045)]"
-                        >
-                            <button
-                                type="button"
-                                className="flex w-full items-center justify-between gap-3 text-left"
-                                onClick={() => toggleService(service.id)}
-                                aria-expanded={isOpen}
-                            >
-                                <span className="min-w-0">
-                                    <span className="block text-base font-semibold leading-tight text-slate-800">
-                                        {service.name}
-                                    </span>
-                                    <span className="mt-1.5 block text-xs font-medium leading-5 text-slate-400">
-                                        {service.subtitle}
-                                    </span>
-                                </span>
-                                <FiChevronDown
-                                    className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                                    aria-hidden="true"
-                                />
-                            </button>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-slate-50 px-2.5 text-[11px] font-semibold text-slate-600">
-                                    <FiClock className="h-3 w-3 text-slate-400" aria-hidden="true" />
-                                    {service.duration}
-                                </span>
-                                {service.price ? (
-                                    <span className="inline-flex min-h-7 items-center rounded-full bg-slate-50 px-2.5 text-[11px] font-semibold text-slate-600">
-                                        {service.price}
-                                    </span>
-                                ) : null}
-                            </div>
-
-                            {isOpen ? (
-                                <div className="mt-3 border-t border-slate-100 pt-3">
-                                    <p className="text-xs leading-5 text-slate-600">
-                                        {service.description}
-                                    </p>
-                                </div>
-                            ) : null}
-                        </article>
-                    );
-                })}
+        <section id="service" className="bg-canvas px-4 py-4 md:px-6 lg:px-0">
+            <div className="mx-auto grid max-w-md grid-cols-1 items-start gap-4 md:max-w-3xl md:grid-cols-2 lg:max-w-none">
+                {items.map((service) => (
+                    <ServiceCard
+                        key={service.id}
+                        name={service.name}
+                        subtitle={service.subtitle}
+                        duration={service.duration}
+                        price={service.price}
+                        description={service.description}
+                        expanded={openServiceIds.has(service.id)}
+                        onToggle={() => toggleService(service.id)}
+                    />
+                ))}
             </div>
         </section>
     );

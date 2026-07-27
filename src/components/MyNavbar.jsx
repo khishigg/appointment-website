@@ -83,6 +83,9 @@ export default function MyNavbar() {
             <Nav.Link as={Link} to="/" className="px-lg-3 fw-medium">Нүүр хуудас</Nav.Link>
             <Nav.Link as={Link} to="/" className="px-lg-3 fw-medium">Бидний тухай</Nav.Link>
             <Nav.Link as={Link} to="/booking" className="px-lg-3 fw-medium">Цаг авах</Nav.Link>
+            {isAuthenticated && (
+              <Nav.Link as={Link} to="/my-appointments" className="px-lg-3 fw-medium">Захиалгын түүх</Nav.Link>
+            )}
           </Nav>
 
           <div className="desktop-auth-actions">
@@ -151,6 +154,9 @@ export default function MyNavbar() {
                       <Nav.Link as={Link} to="/" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Нүүр хуудас</Nav.Link>
                       <Nav.Link as={Link} to="/" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Бидний тухай</Nav.Link>
                       <Nav.Link as={Link} to="/booking" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Цаг авах</Nav.Link>
+                      {isAuthenticated && (
+                        <Nav.Link as={Link} to="/my-appointments" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Захиалгын түүх</Nav.Link>
+                      )}
                     </Nav>
 
                     <div className="d-flex flex-column gap-3">

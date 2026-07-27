@@ -33,6 +33,8 @@ const getStatusMessage = (status) => {
             return 'Admin эрх шаардлагатай байна.';
         case 404:
             return 'Эмнэлэг, салбар эсвэл эмч олдсонгүй.';
+        case 409:
+            return 'Энэ цаг дөнгөж сая захиалагдлаа.';
         case 500:
             return 'Эмнэлгийн мэдээллийн сантай холбогдоход алдаа гарлаа.';
         default:
@@ -88,7 +90,10 @@ const validateAvailabilityQuery = ({ startDate, endDate, slotDuration }) => {
     return duration;
 };
 
-export async function clinicRequest(path, { signal } = {}) {
+export async function clinicRequest(
+    path,
+    { signal, method = 'GET', body, preferServerMessage = false } = {}
+) {
     const token = getToken();
     const headers = {
         'Content-Type': 'application/json',
@@ -103,8 +108,10 @@ export async function clinicRequest(path, { signal } = {}) {
     try {
         response = await fetch(new URL(path, clinicApiBaseUrl), {
             signal,
+            method,
             cache: 'no-store',
             headers,
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
     } catch (error) {
         if (error.name === 'AbortError') throw error;
@@ -113,9 +120,12 @@ export async function clinicRequest(path, { signal } = {}) {
 
     if (!response.ok) {
         const message = await getErrorMessage(response);
+        // Захиалга үүсгэх зэрэг дуудлагад сервер яг ямар шалтгаанаар татгалзсаныг
+        // ({ message }) шууд харуулах нь чухал тул статусын ерөнхий текстээс дээгүүр тавина.
         const error = new Error(
-            getStatusMessage(response.status) ||
-            message ||
+            (preferServerMessage
+                ? message || getStatusMessage(response.status)
+                : getStatusMessage(response.status) || message) ||
             `Мэдээлэл авахад алдаа гарлаа (${response.status}).`
         );
         error.status = response.status;
@@ -148,12 +158,29 @@ export const getBranchProviders = (clinicId, clinicNum, options) =>
         options
     );
 
-export const getProviderAvailability = (
-    clinicId,
-    clinicNum,
-    provNum,
-    { startDate, endDate, slotDuration = 30, signal } = {}
-) => {
+export const getClinicProviders = (clinicId, options) =>
+    clinicRequest(
+        `/api/clinics/${encodeURIComponent(clinicId)}/providers`,
+        options
+    );
+
+export const getClinicProducts = (clinicId, options) =>
+    clinicRequest(
+        `/api/clinics/${encodeURIComponent(clinicId)}/products`,
+        options
+    );
+
+// Захиалга үүсгэх. payload-ыг дуудагч тал (buildAppointmentPayload) угсарна —
+// clinicNum байхгүй үед тэр талбар payload-д ОГТ орохгүй.
+export const createAppointment = (clinicId, payload, { signal } = {}) =>
+    clinicRequest(`/api/clinics/${encodeURIComponent(clinicId)}/appointments`, {
+        method: 'POST',
+        body: payload,
+        preferServerMessage: true,
+        signal,
+    });
+
+const buildAvailabilityQuery = ({ clinicNum, startDate, endDate, slotDuration = 30 }) => {
     const validatedDuration = validateAvailabilityQuery({
         startDate,
         endDate,
@@ -165,11 +192,20 @@ export const getProviderAvailability = (
         slotDuration: String(validatedDuration),
     });
 
-    return clinicRequest(
-        `/api/clinics/${encodeURIComponent(clinicId)}/branches/${encodeURIComponent(clinicNum)}/providers/${encodeURIComponent(provNum)}/availability?${query}`,
+    // Салбар сонгосон үед л clinicNum нэмнэ. 0 нь бодит утга тул үлдээнэ;
+    // зөвхөн утга байхгүй (null/undefined/'') үед салбаргүй горимд ордог.
+    if (clinicNum !== null && clinicNum !== undefined && clinicNum !== '') {
+        query.set('clinicNum', String(clinicNum));
+    }
+
+    return query;
+};
+
+export const getProviderAvailability = (clinicId, provNum, { signal, ...query } = {}) =>
+    clinicRequest(
+        `/api/clinics/${encodeURIComponent(clinicId)}/providers/${encodeURIComponent(provNum)}/availability?${buildAvailabilityQuery(query)}`,
         { signal }
     );
-};
 
 export const resolveClinicAssetUrl = (value) => {
   if (!value) return '';

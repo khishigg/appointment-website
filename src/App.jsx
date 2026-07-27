@@ -6,6 +6,7 @@ import BookingPage from "./pages/BookingPage";
 import CalendarPage from "./pages/CalendarPage";
 import Login from "./pages/Login";
 import RegisterPage from "./pages/RegisterPage";
+import MyAppointmentsPage from "./pages/MyAppointmentsPage";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { useAuthStore } from "./store/AuthStore";
 
@@ -47,6 +48,7 @@ const AppShell = () => {
         <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
         <Route path="/emch-songoh" element={<Navigate to="/booking" replace />} />
         <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="/my-appointments" element={<ProtectedRoute><MyAppointmentsPage /></ProtectedRoute>} />
       </Routes>
       {!isAuthPage && <Footer />}
     </>

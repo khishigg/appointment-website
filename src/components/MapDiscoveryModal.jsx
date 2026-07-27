@@ -101,7 +101,7 @@ const MapCanvas = ({
             }}
             onClick={() => setSelectedHospital(null)}
         >
-            <div className="absolute bottom-10 right-4 z-[1000] h-14 w-14 overflow-hidden rounded-full bg-white/90 shadow-sm backdrop-blur-2xl">
+            <div className="absolute bottom-10 right-4 z-[var(--z-sticky)] h-14 w-14 overflow-hidden rounded-full bg-white/90 shadow-sm backdrop-blur-2xl">
                 <button
                     type="button"
                     onClick={handleMyLocation}
@@ -157,9 +157,9 @@ const MapDiscoveryModal = ({ isOpen, onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col"
+            className="fixed inset-0 z-[var(--z-modal)] flex flex-col"
         >
-            <div className="absolute left-4 right-4 top-6 z-[1000] flex items-center gap-3">
+            <div className="absolute left-4 right-4 top-6 z-[var(--z-sticky)] flex items-center gap-3">
                 <div className="left-4 flex flex-1 items-center gap-4 rounded-full border-none bg-white/90 px-6 py-2 shadow-sm backdrop-blur-2xl">
                     <FiSearch
                         className="text-gray-400"

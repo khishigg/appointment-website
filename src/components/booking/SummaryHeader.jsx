@@ -1,48 +1,37 @@
 import React from 'react';
 
+import { formatProductPrice } from './productFormat';
+
+/**
+ * Захиалгын хураангуй — BookingDetails-ийн доод хэсэгт, Буцах/Захиалах товчнуудын дээр.
+ *
+ * Хайрцаг (card) БИШ — зөвхөн цэвэрхэн текст. Огноо & цаг нь хэрэглэгчийн батлах гэж буй
+ * гол мэдээлэл тул тэргүүлэх мөрөнд тод; эмч · үйлчилгээ · үнэ нь доор бүдэг дэмжих мөрөнд.
+ * Юу ч тасрахгүй — урт бол байгалиар мулгайлна.
+ */
 export default function SummaryHeader({
-    patientInfo,
-    selectedClinic,
     selectedService,
-    selectedBranch,
+    selectedDoctor,
     selectedTimeSlot,
 }) {
+    const servicePrice = formatProductPrice(selectedService?.price);
+    const timeLabel = selectedTimeSlot
+        ? `${selectedTimeSlot.date || ''} • ${selectedTimeSlot.time || ''}`.replace(/^ • | • $/, '').trim()
+        : '';
+
+    // Дэмжих мөр: Эмч · Үйлчилгээ · Үнэ. Сонгогдоогүй хэсгийг алгасна.
+    const supportingParts = [selectedDoctor?.name, selectedService?.name, servicePrice].filter(Boolean);
+
     return (
-        <div className="sticky top-0 z-30 bg-gray-50 border-b border-gray-200 px-4 py-4">
-            <h2 className="text-center text-base font-semibold text-gray-800 mb-3">
-                Захиалгын мэдээлэл
-            </h2>
-            {selectedClinic?.name ? (
-                <p className="mb-3 text-center text-sm font-medium text-gray-600">
-                    {selectedClinic.name}
+        <div className="mb-3">
+            <p className="text-sm font-semibold leading-snug text-ink break-words">
+                {timeLabel || 'Цаг сонгоогүй'}
+            </p>
+            {supportingParts.length > 0 ? (
+                <p className="mt-0.5 text-xs leading-snug text-muted break-words">
+                    {supportingParts.join(' · ')}
                 </p>
             ) : null}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-white rounded-lg p-3 border border-gray-100">
-                    <span className="text-gray-500 text-xs">Өвчтөн</span>
-                    <p className="font-medium text-gray-900 truncate">
-                        {patientInfo.lastName} {patientInfo.firstName}
-                    </p>
-                </div>
-                <div className="bg-white rounded-lg p-3 border border-gray-100">
-                    <span className="text-gray-500 text-xs">Үйлчилгээ</span>
-                    <p className="font-medium text-gray-900 truncate">
-                        {selectedService?.name || '-'}
-                    </p>
-                </div>
-                <div className="bg-white rounded-lg p-3 border border-gray-100">
-                    <span className="text-gray-500 text-xs">Салбар</span>
-                    <p className="font-medium text-gray-900 truncate">
-                        {selectedBranch?.name || '-'}
-                    </p>
-                </div>
-                <div className="bg-white rounded-lg p-3 border border-gray-100">
-                    <span className="text-gray-500 text-xs">Огноо & Цаг</span>
-                    <p className="font-medium text-gray-900 truncate">
-                        {selectedTimeSlot?.date} • {selectedTimeSlot?.time}
-                    </p>
-                </div>
-            </div>
         </div>
     );
 }

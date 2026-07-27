@@ -34,6 +34,9 @@ const initialState = {
     initialScrollDate: null,    // New: to auto-scroll to a specific date
     isLoading: false,
     error: null,
+
+    // Захиалга үүссэн/409 гарсны дараа availability-г албадан дахин татах тоолуур
+    availabilityRefreshKey: 0,
 };
 
 export const useBookingStore = create(
@@ -72,10 +75,10 @@ export const useBookingStore = create(
                 selectedTimeSlot: null,
             }),
 
+            // Урсгал нь цаг → үйлчилгээ тул үйлчилгээ солиход сонгосон цагийг АРИЛГАХГҮЙ
+            // (арилгавал POST-д илгээх rawSlot/operatoryNum алга болно).
             selectService: (service) => set({
                 selectedService: service,
-                // Reset time slot when service changes (different durations)
-                selectedTimeSlot: null,
             }),
 
             selectTimeSlot: (timeSlot) => set({
@@ -102,6 +105,11 @@ export const useBookingStore = create(
 
             openBookingDetails: () => set({ isBookingDetailsOpen: true }),
             closeBookingDetails: () => set({ isBookingDetailsOpen: false }),
+
+            // ============ AVAILABILITY REFRESH ============
+            refreshAvailability: () => set((state) => ({
+                availabilityRefreshKey: state.availabilityRefreshKey + 1,
+            })),
 
             // ============ LOADING & ERROR STATE ============
             setLoading: (isLoading) => set({ isLoading }),
