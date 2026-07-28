@@ -1,6 +1,4 @@
-const DEFAULT_API_BASE_URL = 'https://localhost:7161';
-
-export const authApiBaseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+export const authApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const DEFAULT_LOGIN_ERROR = 'Нэвтрэх нэр эсвэл нууц үг буруу байна.';
 

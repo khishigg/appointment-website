@@ -1,9 +1,6 @@
 import { AUTH_STORAGE_KEY, useAuthStore } from '../store/AuthStore';
 
-const DEFAULT_API_BASE_URL = 'https://localhost:7161';
-
-export const clinicApiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+export const clinicApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const getToken = () => {
     try {

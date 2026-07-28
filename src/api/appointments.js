@@ -1,9 +1,8 @@
 import { createAppointment, getProviderAvailability } from './clinics';
 
-const DEFAULT_API_BASE_URL = 'https://localhost:7161';
 const DEFAULT_SLOT_DURATION = 30;
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const getStoredAuth = () => {
     try {
@@ -28,7 +27,7 @@ const buildAuthHeaders = () => {
     const auth = getStoredAuth();
     const token = auth?.token;
     const tokenPayload = token ? getJwtPayload(token) : null;
-    const tenantId = tokenPayload?.TenantId || import.meta.env.VITE_TENANT_ID || '1';
+    const tenantId = tokenPayload?.TenantId || import.meta.env.VITE_TENANT_ID;
     const headers = {
         'X-Tenant-Id': tenantId,
         'Content-Type': 'application/json',
