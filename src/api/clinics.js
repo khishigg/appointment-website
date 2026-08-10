@@ -1,18 +1,6 @@
-import { AUTH_STORAGE_KEY, useAuthStore } from '../store/AuthStore';
+import { clearAppToken, getAppToken } from './appToken';
 
 export const clinicApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
-const getToken = () => {
-    try {
-        const stored =
-            localStorage.getItem(AUTH_STORAGE_KEY) ||
-            sessionStorage.getItem(AUTH_STORAGE_KEY);
-        const auth = JSON.parse(stored || 'null');
-        return auth?.token || null;
-    } catch {
-        return null;
-    }
-};
 
 const getErrorMessage = async (response) => {
     try {
@@ -91,25 +79,28 @@ export async function clinicRequest(
         preferServerMessage = false,
     } = {}
 ) {
-    const token = getToken();
-    const headers = {
-        'Content-Type': 'application/json',
-    };
-
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
+    const sendRequest = async (token) =>
+        fetch(new URL(path, clinicApiBaseUrl), {
+            signal,
+            method,
+            cache: 'no-store',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
 
     let response;
 
     try {
-        response = await fetch(new URL(path, clinicApiBaseUrl), {
-            signal,
-            method,
-            cache: 'no-store',
-            headers,
-            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        });
+        response = await sendRequest(await getAppToken());
+
+        // Refresh once when the cached application token has expired or been revoked.
+        if (response.status === 401) {
+            clearAppToken();
+            response = await sendRequest(await getAppToken());
+        }
     } catch (error) {
         if (error.name === 'AbortError') throw error;
         throw new Error('Сервертэй холбогдож чадсангүй. Дахин оролдоно уу.');
@@ -127,12 +118,8 @@ export async function clinicRequest(
         );
         error.status = response.status;
 
-        // Хугацаа дууссан session-ийг Guest төлөвт буцаана, гэхдээ одоогийн route-оос
-        // хэзээ ч гаргахгүй. Guest-ийн 401 дээр logout нь no-op байна.
-        if (response.status === 401) {
-            useAuthStore.getState().logout();
-        }
-
+        // A second 401 has already refreshed the AppToken once. Do not log out
+        // the current user because their session is unrelated to this token.
         throw error;
     }
 

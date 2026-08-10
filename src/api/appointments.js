@@ -2,44 +2,6 @@ import { createAppointment, getProviderAvailability } from './clinics';
 
 const DEFAULT_SLOT_DURATION = 30;
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
-const getStoredAuth = () => {
-    try {
-        const stored = localStorage.getItem('ashid_auth');
-        return stored ? JSON.parse(stored) : null;
-    } catch {
-        return null;
-    }
-};
-
-const getJwtPayload = (token) => {
-    try {
-        const [, payload] = token.split('.');
-        const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(normalizedPayload));
-    } catch {
-        return null;
-    }
-};
-
-const buildAuthHeaders = () => {
-    const auth = getStoredAuth();
-    const token = auth?.token;
-    const tokenPayload = token ? getJwtPayload(token) : null;
-    const tenantId = tokenPayload?.TenantId || import.meta.env.VITE_TENANT_ID;
-    const headers = {
-        'X-Tenant-Id': tenantId,
-        'Content-Type': 'application/json',
-    };
-
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-
-    return headers;
-};
-
 export const formatApiDate = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -90,23 +52,6 @@ export const resolveBookingClinicNum = ({ doctor, branch } = {}) => {
 
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
-};
-
-const buildAvailableAppointmentsUrl = ({ doctor, doctorProvNum, provNum, startDate, endDate, slotDuration }) => {
-    const url = new URL('/api/Appointments/available', apiBaseUrl);
-    const providerNum = getDoctorProvNum({ doctor, doctorProvNum, provNum });
-
-    url.searchParams.set('startDate', startDate);
-    url.searchParams.set('endDate', endDate);
-    url.searchParams.set('slotDuration', slotDuration ?? DEFAULT_SLOT_DURATION);
-
-    if (providerNum === undefined || providerNum === null || providerNum === '') {
-        throw new Error('Doctor or authenticated user ProvNum is required for available appointments.');
-    }
-
-    url.searchParams.set('provNum', String(providerNum));
-
-    return url.toString();
 };
 
 const normalizeAvailableResponse = (data) => {
@@ -194,29 +139,7 @@ export async function getAvailableAppointments({
         return normalizeAvailableResponse(data);
     }
 
-    const res = await fetch(
-        buildAvailableAppointmentsUrl({ doctor, doctorProvNum, provNum, startDate, endDate, slotDuration }),
-        { 
-            signal,
-            cache: 'no-store',
-            headers: buildAuthHeaders(),
-        }
-    );
-
-    if (!res.ok) {
-        let message = `Available appointments request failed with ${res.status}`;
-
-        try {
-            const errorData = await res.json();
-            message = errorData?.message || errorData?.error || message;
-        } catch {
-            // Keep the status-based message when the backend does not return JSON.
-        }
-
-        throw new Error(message);
-    }
-
-    return normalizeAvailableResponse(await res.json());
+    throw new Error('Сул цагийн мэдээлэл авахын тулд clinicId шаардлагатай.');
 }
 
 export const fetchAvailableAppointments = getAvailableAppointments;

@@ -1,42 +1,15 @@
-import { clinicApiBaseUrl } from './clinics';
+import { clinicRequest } from './clinics';
 import { bookAppointment } from './appointments';
 
-const getErrorMessage = async (response) => {
-    try {
-        const data = await response.json();
-        return data?.message || data?.error || data?.title || null;
-    } catch {
-        return null;
-    }
-};
-
-const bookingIdentityRequest = async (path, body, { signal } = {}) => {
-    let response;
-
-    try {
-        response = await fetch(new URL(path, clinicApiBaseUrl), {
-            method: 'POST',
-            signal,
-            cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
-    } catch (error) {
-        if (error.name === 'AbortError') throw error;
-        throw new Error('Сервертэй холбогдож чадсангүй. Дахин оролдоно уу.');
-    }
-
-    if (!response.ok) {
-        const error = new Error(
-            (await getErrorMessage(response)) ||
-            `Баталгаажуулалтын хүсэлт амжилтгүй боллоо (${response.status}).`
-        );
-        error.status = response.status;
-        throw error;
-    }
-
-    return response.json();
-};
+// Booking identity endpoints keep the bookingToken in the request body while
+// clinicRequest supplies the AppointmentApp bearer token and its one-time refresh.
+const bookingIdentityRequest = (path, body, { signal } = {}) =>
+    clinicRequest(path, {
+        method: 'POST',
+        body,
+        preferServerMessage: true,
+        signal,
+    });
 
 export const createAppointmentBooking = (options) => bookAppointment(options);
 
