@@ -4,6 +4,7 @@
  */
 
 export { default as ClinicProfile } from './ClinicProfile';
+export { default as ClinicAbout } from './ClinicAbout';
 export { default as BranchSelector } from './BranchSelector';
 export { default as ServiceSelector } from './ServiceSelector';
 export { default as LocationSelector } from './LocationSelector';

@@ -18,7 +18,7 @@ export default function DoctorsStats() {
           <CountUp end={50} duration={2.2} suffix="+" /> эмнэлэг &nbsp;·&nbsp;
           <CountUp end={1200} duration={2.8} suffix="+" /> амжилттай захиалга
         </h3>
-        <p className="text-body text-gray-500 mb-0">Live data update-тайгаар итгэлийг нэмэгдүүлнэ.</p>
+        <p className="text-legacy-body text-gray-500 mb-0">Live data update-тайгаар итгэлийг нэмэгдүүлнэ.</p>
       </motion.div>
     </Container>
   );

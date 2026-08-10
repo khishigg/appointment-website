@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navbar, Nav, Container } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
 import ashidLogo from "../assets/ASHID-LOGO.png";
@@ -8,6 +8,7 @@ import { useAuthStore } from "../store/AuthStore";
 
 export default function MyNavbar() {
   const [scrolled, setScrolled] = useState(false);
+  const navRef = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated, user, role, logout } = useAuthStore();
@@ -15,6 +16,7 @@ export default function MyNavbar() {
   const profileRole = role || user?.role || "User";
   const profileInitial = displayName.trim().charAt(0).toUpperCase() || "Х";
   const isBookingPage = location.pathname === "/booking";
+  const isSubpage = location.pathname !== "/";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +25,53 @@ export default function MyNavbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  /**
+   * Navbar нь `fixed="top"` — урсгалаас гардаг тул хуудас бүр өөрөө дээд зайгаа
+   * гаргах ёстой болдог. Тоог гараар таамаглавал буруу: navbar-ын өндөр гүйхэд
+   * 40px padding → 19px болж ӨӨРЧЛӨГДДӨГ (index.css:2244 / :2255).
+   *
+   * Тиймээс бодит өндрийг хэмжиж `--app-header-height`-д бичнэ.
+   * ⚠️ ЗӨВХӨН гүйгээгүй (хамгийн өндөр) үеийн утгыг бичнэ — эс тэгвэл гүйлгэхэд
+   * navbar намсаж, хуудасны padding хамт багасан агуулга үсэрнэ.
+   */
+  useEffect(() => {
+    const element = navRef.current;
+    if (!element) return undefined;
+
+    // ЗӨВХӨН ӨСГӨНӨ. Ингэснээр:
+    //  · гүйхэд navbar намсахад хуудасны padding багасаж агуулга ҮСРЭХГҮЙ
+    //  · шилжилтийн дунд (0.5s transition) хэмжсэн бага утга бичигдэхгүй
+    //  · логоны зураг ачаалагдаж navbar өндөрсөхөд утга зөв шинэчлэгдэнэ
+    let maxHeight = 0;
+
+    const applyHeight = () => {
+      const height = element.offsetHeight;
+      if (height <= maxHeight) return;
+
+      maxHeight = height;
+      document.documentElement.style.setProperty("--app-header-height", `${height}px`);
+    };
+
+    applyHeight();
+
+    // Логоны зураг ачаалагдах, фонт солигдох зэрэгт navbar өндөр өөрчлөгдөнө.
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(element);
+
+    // Дэлгэцийн хэмжээ өөрчлөгдвөл navbar жинхэнэ утгаараа намсаж болно —
+    // тэр үед хамгийн их утгыг тэглэж дахин хэмжинэ.
+    const handleResize = () => {
+      maxHeight = 0;
+      applyHeight();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [isBookingPage, isAuthenticated]);
 
   if (isBookingPage) {
     return (
@@ -52,9 +101,10 @@ export default function MyNavbar() {
 
   return (
     <Navbar
+      ref={navRef}
       expand="lg"
       fixed="top"
-      className={`navbar-custom ${scrolled ? "navbar-scrolled" : ""}`}
+      className={`navbar-custom ${scrolled ? "navbar-scrolled" : ""} ${isSubpage ? "navbar-subpage" : ""}`}
     >
       <Container className="d-flex align-items-center">
         <Navbar.Brand as={Link} to="/" className="d-flex align-items-center position-relative left-2 gap-2 m-0">
@@ -80,12 +130,10 @@ export default function MyNavbar() {
 
         <div className="desktop-navbar-content d-none d-lg-flex">
           <Nav className="mx-auto text-center py-2 py-lg-0">
-            <Nav.Link as={Link} to="/" className="px-lg-3 fw-medium">Нүүр хуудас</Nav.Link>
+            <Nav.Link as={Link} to="/" className={`px-lg-3 fw-medium ${location.pathname === '/' ? 'active text-primary' : ''}`}>Нүүр хуудас</Nav.Link>
             <Nav.Link as={Link} to="/" className="px-lg-3 fw-medium">Бидний тухай</Nav.Link>
-            <Nav.Link as={Link} to="/booking" className="px-lg-3 fw-medium">Цаг авах</Nav.Link>
-            {isAuthenticated && (
-              <Nav.Link as={Link} to="/my-appointments" className="px-lg-3 fw-medium">Захиалгын түүх</Nav.Link>
-            )}
+            <Nav.Link as={Link} to="/booking" className={`px-lg-3 fw-medium ${location.pathname === '/booking' ? 'active text-primary' : ''}`}>Цаг авах</Nav.Link>
+            <Nav.Link as={Link} to="/my-appointments" className={`px-lg-3 fw-medium ${location.pathname === '/my-appointments' ? 'active text-primary' : ''}`}>Захиалгын түүх</Nav.Link>
           </Nav>
 
           <div className="desktop-auth-actions">
@@ -112,7 +160,7 @@ export default function MyNavbar() {
               </>
             ) : (
               <>
-                <Link to="/login" className="desktop-login">
+                <Link to="/login" state={{ from: location }} className="desktop-login">
                   <FiLogIn size={17} />
                   <span>Нэвтрэх</span>
                 </Link>
@@ -154,9 +202,7 @@ export default function MyNavbar() {
                       <Nav.Link as={Link} to="/" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Нүүр хуудас</Nav.Link>
                       <Nav.Link as={Link} to="/" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Бидний тухай</Nav.Link>
                       <Nav.Link as={Link} to="/booking" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Цаг авах</Nav.Link>
-                      {isAuthenticated && (
-                        <Nav.Link as={Link} to="/my-appointments" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Захиалгын түүх</Nav.Link>
-                      )}
+                      <Nav.Link as={Link} to="/my-appointments" className="sidebar-nav-link" onClick={() => setIsMenuOpen(false)}>Захиалгын түүх</Nav.Link>
                     </Nav>
 
                     <div className="d-flex flex-column gap-3">
@@ -172,7 +218,7 @@ export default function MyNavbar() {
                         </>
                       ) : (
                         <>
-                          <Link to="/login" className="btn-sidebar-login" onClick={() => setIsMenuOpen(false)}>
+                          <Link to="/login" state={{ from: location }} className="btn-sidebar-login" onClick={() => setIsMenuOpen(false)}>
                             Нэвтрэх
                           </Link>
                           <Link to="/register" className="btn-sidebar-register" onClick={() => setIsMenuOpen(false)}>

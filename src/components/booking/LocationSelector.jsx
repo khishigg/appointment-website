@@ -12,6 +12,7 @@ import {
 import { buildLocationItems } from '../map/locationData';
 import useResolvedLocationItems from '../map/useResolvedLocationItems';
 import { hospitals } from '../../data/hospitals';
+import { getTelHref, getWorkingHours } from './clinicFormat';
 
 // GoogleMap нь эцэг элементийн БОДИТ өндрийг шаарддаг тул өндрийг wrapper div дээр
 // Tailwind-ээр (responsive) өгч, энд 100% болгов. Wrapper-ийн h-* заавал байх ёстой.
@@ -49,33 +50,6 @@ const defaultBranches = [
         isOpen: true,
     },
 ];
-
-const firstDisplayValue = (...values) =>
-    values.find((value) => value !== undefined && value !== null && value !== '');
-
-const formatWorkingHours = (value) => {
-    if (!value || typeof value !== 'string') return '';
-    return value.trim().replace(/\s*-\s*/g, ' - ');
-};
-
-const getWorkingHours = (item) => {
-    const source = item.source || {};
-    return formatWorkingHours(firstDisplayValue(
-        item.workingHours,
-        item.workingHoursJson,
-        source.workingHours,
-        source.WorkingHours,
-        source.workingHoursJson,
-        source.WorkingHoursJson,
-        source.hours,
-        source.Hours
-    ));
-};
-
-const getTelHref = (phone) => {
-    const normalized = String(phone || '').replace(/[^\d+]/g, '');
-    return normalized ? `tel:${normalized}` : '';
-};
 
 const LocationMap = ({ items, isResolving }) => {
     const [map, setMap] = useState(null);

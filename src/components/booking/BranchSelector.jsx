@@ -3,7 +3,7 @@
  */
 
 import { motion } from 'framer-motion';
-import { FiMapPin, FiCheck, FiClock, FiPhone } from 'react-icons/fi';
+import { FiArrowRight, FiMapPin, FiCheck, FiClock, FiPhone } from 'react-icons/fi';
 import { useBookingStore } from '../../store/BookingStore';
 
 const defaultBranches = [
@@ -51,7 +51,6 @@ const defaultBranches = [
 
 export default function BranchSelector({
     branches = defaultBranches,
-    isAdmin = false,
     isLoading = false,
     error = '',
     onRetry,
@@ -78,8 +77,9 @@ export default function BranchSelector({
                 <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-heading">Салбар сонгох</h2>
             </div>
 
+            {/* Desktop grid: 4 салбарт өнчин карт үүсэхээс сэргийлж lg=2×2, xl=1×4. */}
             <div
-                className="flex gap-[14px] overflow-x-auto px-4 md:px-6 lg:px-0 pb-3 max-md:no-scrollbar snap-x snap-mandatory lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:overflow-visible lg:snap-none"
+                className="flex gap-[14px] overflow-x-auto px-4 md:px-6 lg:px-0 pb-3 max-md:no-scrollbar snap-x snap-mandatory lg:grid lg:grid-cols-2 xl:grid-cols-4 lg:gap-4 lg:overflow-visible lg:snap-none"
                 style={{ scrollPaddingLeft: '1rem' }}
             >
                 {branches.length === 0 ? (
@@ -103,7 +103,7 @@ export default function BranchSelector({
                             }}
                             whileTap={{ scale: 0.97 }}
                             className={`
-                                branch-card w-[200px] md:w-[252px] lg:w-auto min-h-[130px] text-left flex flex-col h-full
+                                branch-card group w-[200px] md:w-[252px] lg:w-auto min-h-[130px] text-left flex flex-col h-full
                                 ${isSelected ? 'selected' : ''}
                                 ${!branch.isOpen ? 'opacity-60' : ''}
                             `}
@@ -113,14 +113,21 @@ export default function BranchSelector({
                                 <h3 className="text-[20px] leading-[1.08] font-semibold text-heading">
                                     {branch.name}
                                 </h3>
-                                {isSelected && (
+                                {/* Сонгогдсон → check. Үгүй бол desktop hover-т сум илэрч,
+                                    карт дарж болохыг илэрхийлнэ. */}
+                                {isSelected ? (
                                     <motion.div
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="flex-shrink-0 w-5 h-5 rounded-full bg-trust-green flex items-center justify-center"
+                                        className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
                                     >
-                                        <FiCheck className="w-3 h-3 text-white" />
+                                        <FiCheck className="w-3 h-3 text-primary-text" />
                                     </motion.div>
+                                ) : (
+                                    <FiArrowRight
+                                        className="mt-0.5 h-4 w-4 flex-shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100"
+                                        aria-hidden="true"
+                                    />
                                 )}
                             </div>
 
@@ -130,7 +137,7 @@ export default function BranchSelector({
                             </div>
 
                             <div className="flex items-center justify-between gap-2 mt-auto pt-3">
-                                {!isAdmin && branch.hours ? (
+                                {branch.hours ? (
                                     <div className="flex items-center gap-1">
                                         <FiClock className="w-3 h-3 text-faint" />
                                         <span className="text-label font-medium text-muted">{branch.hours}</span>

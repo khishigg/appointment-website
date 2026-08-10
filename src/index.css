@@ -34,12 +34,13 @@
   @apply bg-zocdoc-yellow ring-2 ring-zocdoc-yellow-dark;
 }
 
+/* Токен систем: амбер brand өнгийг минимал саарлаар сольсон (booking-ийн чиглэл). */
 .branch-card {
-  @apply flex-shrink-0 px-[14px] py-[14px] bg-white rounded-2xl border border-gray-200 shadow-md hover:shadow-lg hover:border-brand-500 transition-all cursor-pointer snap-start;
+  @apply flex-shrink-0 p-4 bg-surface rounded-card border border-line shadow-card hover:shadow-overlay hover:border-faint transition-all cursor-pointer snap-start;
 }
 
 .branch-card.selected {
-  @apply border-brand-500 bg-brand-100/20 ring-1 ring-brand-500;
+  @apply border-selected-border bg-selected-bg ring-1 ring-selected-border;
 }
 
 .doctor-card {
@@ -51,6 +52,11 @@
 }
 
 :root {
+  /* Fixed navbar-ын өндөр. MyNavbar mount болоход БОДИТ хэмжээгээр дарж бичнэ —
+     энэ нь зөвхөн эхний фрэймийн нөөц утга. Хуудсууд `pt-[var(--app-header-height)]`
+     хэлбэрээр уншина (тоог гараар таамаглахгүй). */
+  --app-header-height: 88px;
+
   /* 🎨 Color System (Ashid Amber Theme) */
   /* --primary-50: #bdcb40d6; */
   --primary-100: #e4c879;
@@ -332,13 +338,18 @@ a {
   color: var(--gray-700);
 }
 
-.text-body {
+/* ⚠️ "text-body"/"text-body-sm" НЭРИЙГ бүү ашигла — tokens.css-ийн @theme
+   Tailwind v4 utility (14px/13px, slate token color) яг ижил нэрээр үүсгэдэг бөгөөд
+   layer-гүй CSS нь @layer utilities-ээс ЯМАГТ давамгайлдаг тул шинэ booking
+   компонентуудын өнгө/хэмжээг чимээгүй дарж байсан. Зөвхөн энэ хуучин
+   (Home/marketing) компонентуудад зориулсан тул тусгай нэрээр тусгаарлав. */
+.text-legacy-body {
   font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--gray-700);
 }
 
-.text-body-sm {
+.text-legacy-body-sm {
   font-size: var(--fs-body-sm);
   line-height: 1.5;
   color: var(--gray-600);
@@ -1037,13 +1048,13 @@ h5 {
 .hospital-item-logo-box {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--gray-200);
-  background-color: #fff;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
 }
 
@@ -2246,13 +2257,21 @@ h5 {
 }
 
 .navbar-scrolled {
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.01);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
   padding-top: 0.6rem !important;
   padding-bottom: 0.6rem !important;
+}
+
+.navbar-subpage {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 }
 
 .navbar-custom .navbar-brand img {
@@ -3357,12 +3376,13 @@ h5 {
 .search-popular-logo {
   width: 44px;
   height: 44px;
-  background: #f2f2f7;
-  border-radius: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
   flex-shrink: 0;
 }
 

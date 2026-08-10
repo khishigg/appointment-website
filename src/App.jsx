@@ -8,18 +8,6 @@ import Login from "./pages/Login";
 import RegisterPage from "./pages/RegisterPage";
 import MyAppointmentsPage from "./pages/MyAppointmentsPage";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { useAuthStore } from "./store/AuthStore";
-
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  const location = useLocation();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return children;
-};
 
 export default function App() {
   return (
@@ -44,11 +32,11 @@ const AppShell = () => {
         {/* Home is public so visitors can use the header login action. */}
         <Route path="/" element={<Home />} />
 
-        {/* Protected Routes */}
-        <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+        {/* Guest болон нэвтэрсэн хэрэглэгчид ижил public workflow ашиглана. */}
+        <Route path="/booking" element={<BookingPage />} />
         <Route path="/emch-songoh" element={<Navigate to="/booking" replace />} />
-        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-        <Route path="/my-appointments" element={<ProtectedRoute><MyAppointmentsPage /></ProtectedRoute>} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/my-appointments" element={<MyAppointmentsPage />} />
       </Routes>
       {!isAuthPage && <Footer />}
     </>

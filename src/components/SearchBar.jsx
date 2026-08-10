@@ -1,80 +1,114 @@
 import React, { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaLocationArrow } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FiSearch, FiX, FiFilter, FiMapPin } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import Input from "./ui/Input";
 import MapDiscoveryModal from "./MapDiscoveryModal";
-import { getClinics } from "../api/clinics";
-import { isAdminRole, useAuthStore } from "../store/AuthStore";
-
-const aimags = [
-  "Архангай", "Баян-Өлгий", "Баянхонгор", "Булган", "Говь-Алтай",
-  "Говьсүмбэр", "Дархан-Уул", "Дорнод", "Дорноговь", "Дундговь",
-  "Завхан", "Орхон", "Өвөрхангай", "Өмнөговь", "Сүхбаатар",
-  "Сэлэнгэ", "Төв", "Увс", "Ховд", "Хөвсгөл", "Хэнтий"
-];
-
-const mockResults = [
-  { id: 1, name: "Интермед Эмнэлэг", logo: "🏥", city: "Улаанбаатар", district: "Хан-Уул" },
-  { id: 2, name: "Грандмед Эмнэлэг", logo: "🏛️", city: "Улаанбаатар", district: "Хан-Уул" },
-  { id: 3, name: "Сонгдо Эмнэлэг", logo: "🏥", city: "Улаанбаатар", district: "Чингэлтэй" },
-  { id: 4, name: "Архангай Нэгдсэн Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Архангай" },
-  { id: 5, name: "Баян-Өлгий Оношилгоо Төв", logo: "🏛️", city: "Орон нутаг", province: "Баян-Өлгий" },
-  { id: 6, name: "Баянхонгор Сувилал", logo: "🌿", city: "Орон нутаг", province: "Баянхонгор" },
-  { id: 7, name: "Булган Төв Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Булган" },
-  { id: 8, name: "Говь-Алтай Нэгдсэн Эмнэлэг", logo: "🩹", city: "Орон нутаг", province: "Говь-Алтай" },
-  { id: 9, name: "Говьсүмбэр Эмнэлэг", logo: "🏠", city: "Орон нутаг", province: "Говьсүмбэр" },
-  { id: 10, name: "Дархан Нэгдсэн Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Дархан-Уул" },
-  { id: 11, name: "Дорнод Бүсийн Төв", logo: "🏛️", city: "Орон нутаг", province: "Дорнод" },
-  { id: 12, name: "Дорноговь Оношилгоо", logo: "🔬", city: "Орон нутаг", province: "Дорноговь" },
-  { id: 13, name: "Дундговь Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Дундговь" },
-  { id: 14, name: "Завхан Төв Эмнэлэг", logo: "🏛️", city: "Орон нутаг", province: "Завхан" },
-  { id: 15, name: "Орхон Медипас Эмнэлэг", logo: "🥼", city: "Орон нутаг", province: "Орхон" },
-  { id: 16, name: "Өвөрхангай Нэгдсэн", logo: "🏥", city: "Орон нутаг", province: "Өвөрхангай" },
-  { id: 17, name: "Өмнөговь Тавантолгой Эмнэлэг", logo: "🏗️", city: "Орон нутаг", province: "Өмнөговь" },
-  { id: 18, name: "Сүхбаатар Аймгийн Эмнэлэг", logo: "🏙️", city: "Орон нутаг", province: "Сүхбаатар" },
-  { id: 19, name: "Сэлэнгэ Нэгдсэн Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Сэлэнгэ" },
-  { id: 20, name: "Төв Аймгийн Оношилгоо", logo: "🔬", city: "Орон нутаг", province: "Төв" },
-  { id: 21, name: "Увс Баруун Тур Эмнэлэг", logo: "🏥", city: "Орон нутаг", province: "Увс" },
-  { id: 22, name: "Ховд Бүсийн Төв Эмнэлэг", logo: "🏛️", city: "Орон нутаг", province: "Ховд" },
-  { id: 23, name: "Хөвсгөл Далай Эмнэлэг", logo: "🌊", city: "Орон нутаг", province: "Хөвсгөл" },
-  { id: 24, name: "Хэнтий Хаан Эмнэлэг", logo: "👑", city: "Орон нутаг", province: "Хэнтий" },
-  { id: 25, name: "Улсын Нэгдүгээр Төв Эмнэлэг", logo: "🏥", city: "Улаанбаатар", district: "Сүхбаатар" },
-];
-
 import { createPortal } from "react-dom";
+import { getClinics, resolveClinicAssetUrl } from "../api/clinics";
+
+const ALL_AIMAGS = "Бүх аймаг";
+
 
 const normalizeTenant = (tenant) => {
   const name = tenant.name ?? tenant.Name ?? "Нэргүй эмнэлэг";
+  const logo = tenant.logo ?? tenant.Logo ?? "";
 
   return {
     id: tenant.id ?? tenant.Id,
     name,
-    logo: name.trim().charAt(0).toUpperCase() || "Э",
+    logoUrl: resolveClinicAssetUrl(logo),
+    logoInitial: name.trim().charAt(0).toUpperCase() || "Э",
+    address: tenant.address ?? tenant.Address ?? "",
+    city: tenant.city ?? tenant.City ?? "",
+    province:
+      tenant.province ?? tenant.Province ?? tenant.state ?? tenant.State ?? "",
   };
 };
 
-const getItemMeta = (item, isAdmin) => {
-  if (isAdmin) return null;
+// Backend хаягийг латинаар буцаадаг ("… , Ulaanbaatar 16060") тул хоёр бичлэгт тэсвэртэй.
+const UB_PATTERN = /ulaanbaatar|улаанбаатар/i;
+const isUlaanbaatar = (item) =>
+  UB_PATTERN.test(item.city) || (!item.city && UB_PATTERN.test(item.address));
 
-  return item.city === "Улаанбаатар"
-    ? `${item.city}, ${item.district}`
-    : `${item.province}`;
+// Байршлын өгөгдөл ирдэггүй бол шүүлтүүрийг ОГТ харуулахгүй (хуурмаг chip үүсгэхгүй).
+const hasLocationData = (items) =>
+  items.some((item) => item.city || item.province || UB_PATTERN.test(item.address));
+
+// Аймгийн жагсаалтыг hardcode хийхгүй — ирсэн датагаас гаргана.
+const getProvinces = (items) =>
+  [...new Set(items.map((item) => item.province).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "mn")
+  );
+
+const matchesFilter = (item, filterType, selectedAimag) => {
+  if (filterType === "city") return isUlaanbaatar(item);
+
+  if (filterType === "locality") {
+    if (selectedAimag !== ALL_AIMAGS) return item.province === selectedAimag;
+    return Boolean(item.province) || (!isUlaanbaatar(item) && Boolean(item.city));
+  }
+
+  // "Бусад" — УБ ч биш, аймаг нь ч тодорхойлогдоогүй. Өмнө нь энэ салаа
+  // БАЙХГҮЙ байсан тул "Бүгд"-тэй ижил ажилладаг алдаатай байв.
+  if (filterType === "others") return !isUlaanbaatar(item) && !item.province;
+
+  return true;
 };
 
-const openHospital = ({ navigate, item, isAdmin, onClose, setQuery }) => {
+const getItemMeta = (item) => item.address || "";
+
+const openHospital = ({ navigate, item, onClose, setQuery }) => {
   setQuery("");
-  navigate(
-    isAdmin ? `/booking?clinicId=${encodeURIComponent(item.id)}` : "/booking",
-    { state: { hospital: item } }
-  );
+  // clinicId-г ҮРГЭЛЖ дамжуулна — өмнө нь зочин үед дамждаггүй тул BookingPage
+  // юу ч ачаалахгүй хоосон нээгддэг байв.
+  navigate(`/booking?clinicId=${encodeURIComponent(item.id)}`, {
+    state: { hospital: item },
+  });
   onClose();
 };
 
-const SearchResultsState = ({ isLoading, error, onRetry }) => {
+/** Эмнэлгийн лого — дугуй container дотор төвлөрсөн зураг, алдвал/байхгүй бол нэрийн эхний үсэг. */
+const ClinicLogo = ({ item }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [item.logoUrl]);
+
+  if (!item.logoUrl || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-full border border-gray-200 bg-gray-50 font-semibold text-gray-600">
+        {item.logoInitial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={item.logoUrl}
+      alt={`${item.name} logo`}
+      aria-hidden="true"
+      className="h-full w-full rounded-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+const SearchResultsState = ({ isLoading, error, needsAuth, onRetry }) => {
   if (isLoading) {
     return <div className="tenant-search-state">Эмнэлгийн жагсаалтыг уншиж байна...</div>;
+  }
+
+  // 401 — зочныг хуудаснаас нь шидэхгүй, оронд нь нэвтрэх санал болгоно.
+  if (needsAuth) {
+    return (
+      <div className="tenant-search-state" role="alert">
+        <span>Эмнэлгийн жагсаалтыг харахын тулд нэвтэрнэ үү.</span>
+        <Link to="/login">Нэвтрэх</Link>
+      </div>
+    );
   }
 
   if (error) {
@@ -95,15 +129,20 @@ const MobileSearchOverlay = ({
   query,
   setQuery,
   items,
-  isAdmin,
   isLoading,
   error,
+  needsAuth,
   onRetry,
 }) => {
   const navigate = useNavigate();
-  const [filterType, setFilterType] = useState('all'); // 'all', 'city', 'locality'
-  const [selectedAimag, setSelectedAimag] = useState("Бүх аймаг");
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'city' | 'locality' | 'others'
+  const [selectedAimag, setSelectedAimag] = useState(ALL_AIMAGS);
   const [showAimagDropdown, setShowAimagDropdown] = useState(false);
+
+  // Шүүлтүүр нь ҮҮРГЭЭР биш, ДАТАГААР удирдагдана: байршлын мэдээлэл ирээгүй бол
+  // chip/dropdown огт харагдахгүй (хуурмаг шүүлтүүр үзүүлэхгүй).
+  const showFilters = hasLocationData(items);
+  const provinces = getProvinces(items);
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -125,7 +164,7 @@ const MobileSearchOverlay = ({
     }
   };
 
-    return createPortal(
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -152,7 +191,7 @@ const MobileSearchOverlay = ({
           />
         </div>
 
-        {!isAdmin && (
+        {provinces.length > 0 && (
           <button
             onClick={() => setShowAimagDropdown(!showAimagDropdown)}
             className="search-modal-filter-btn"
@@ -163,7 +202,7 @@ const MobileSearchOverlay = ({
 
         {/* Aimag Dropdown Overlay */}
         <AnimatePresence>
-          {!isAdmin && showAimagDropdown && (
+          {provinces.length > 0 && showAimagDropdown && (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -177,7 +216,7 @@ const MobileSearchOverlay = ({
                 style={{ maxHeight: '320px', width: '100%' }}
               >
                 <div className="grid grid-cols-2 gap-2">
-                  {["Бүх аймаг", ...aimags].map((aimag) => (
+                  {[ALL_AIMAGS, ...provinces].map((aimag) => (
                     <button
                       key={aimag}
                       onClick={() => {
@@ -200,12 +239,13 @@ const MobileSearchOverlay = ({
         </AnimatePresence>
       </div>
 
-      {!isAdmin && (
+      {showFilters && (
         <div className="search-modal-chips-container no-scrollbar">
           {[
             { id: 'all', label: 'Бүгд' },
             { id: 'city', label: 'Улаанбаатар' },
             { id: 'locality', label: 'Орон нутаг' },
+            { id: 'others', label: 'Бусад' },
           ].map((chip) => (
             <button
               key={chip.id}
@@ -228,39 +268,33 @@ const MobileSearchOverlay = ({
           <SearchResultsState
             isLoading={isLoading}
             error={error}
+            needsAuth={needsAuth}
             onRetry={onRetry}
           />
           {!isLoading && !error && items
-            .filter(item => {
-              const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase());
-              if (isAdmin) return matchesQuery;
-              if (filterType === 'all') return matchesQuery;
-              if (filterType === 'city') return matchesQuery && item.city === 'Улаанбаатар';
-              if (filterType === 'locality') {
-                if (selectedAimag === "Бүх аймаг") return matchesQuery && item.city === 'Орон нутаг';
-                return matchesQuery && item.province === selectedAimag;
-              }
-              return matchesQuery;
-            })
+            .filter((item) =>
+              item.name.toLowerCase().includes(query.toLowerCase()) &&
+              matchesFilter(item, filterType, selectedAimag)
+            )
             .map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
-                  openHospital({ navigate, item, isAdmin, onClose, setQuery });
+                  openHospital({ navigate, item, onClose, setQuery });
                 }}
                 className="hospital-list-item"
               >
                 <div className="hospital-item-logo-box">
-                  {item.logo}
+                  <ClinicLogo item={item} />
                 </div>
 
                 <div className="hospital-item-info">
                   <div className="hospital-item-name">
                     {item.name}
                   </div>
-                  {!isAdmin ? (
+                  {getItemMeta(item) ? (
                     <div className="hospital-item-meta">
-                      {getItemMeta(item, isAdmin)}
+                      {getItemMeta(item)}
                     </div>
                   ) : null}
                 </div>
@@ -282,13 +316,14 @@ const PremiumSearchOverlay = ({
   query,
   setQuery,
   items,
-  isAdmin,
   isLoading,
   error,
+  needsAuth,
   onRetry,
 }) => {
   const navigate = useNavigate();
-  const [filterType, setFilterType] = useState('all'); // 'all', 'city', 'locality'
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'city' | 'locality' | 'others'
+  const showFilters = hasLocationData(items);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -311,14 +346,10 @@ const PremiumSearchOverlay = ({
     visible: { opacity: 1, y: 0 }
   };
 
-  const filteredItems = items.filter(item => {
-    const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase());
-    if (isAdmin) return matchesQuery;
-    if (filterType === 'all') return matchesQuery;
-    if (filterType === 'city') return matchesQuery && item.city === 'Улаанбаатар';
-    if (filterType === 'locality') return matchesQuery && item.city === 'Орон нутаг';
-    return matchesQuery;
-  });
+  const filteredItems = items.filter((item) =>
+    item.name.toLowerCase().includes(query.toLowerCase()) &&
+    matchesFilter(item, filterType, ALL_AIMAGS)
+  );
 
   return createPortal(
     <div className="search-premium-overlay" onClick={onClose}>
@@ -351,7 +382,7 @@ const PremiumSearchOverlay = ({
 
         <div className="search-premium-content no-scrollbar">
           {/* 📍 Location Filter Chips (Desktop Version) */}
-          {!isAdmin && (
+          {showFilters && (
             <motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
               {[
                 { id: 'all', label: 'Бүгд' },
@@ -380,6 +411,7 @@ const PremiumSearchOverlay = ({
           <SearchResultsState
             isLoading={isLoading}
             error={error}
+            needsAuth={needsAuth}
             onRetry={onRetry}
           />
           {!isLoading && !error && filteredItems.length > 0 ? (
@@ -389,15 +421,17 @@ const PremiumSearchOverlay = ({
                   key={item.id}
                   variants={itemVariants}
                   onClick={() => {
-                    openHospital({ navigate, item, isAdmin, onClose, setQuery });
+                    openHospital({ navigate, item, onClose, setQuery });
                   }}
                   className="search-popular-card"
                 >
-                  <div className="search-popular-logo">{item.logo}</div>
+                  <div className="search-popular-logo">
+                    <ClinicLogo item={item} />
+                  </div>
                   <div>
                     <div className="search-popular-name">{item.name}</div>
-                    {!isAdmin ? (
-                      <div className="search-popular-type">{getItemMeta(item, isAdmin)}</div>
+                    {getItemMeta(item) ? (
+                      <div className="search-popular-type">{getItemMeta(item)}</div>
                     ) : null}
                   </div>
                 </motion.div>
@@ -416,52 +450,51 @@ const PremiumSearchOverlay = ({
 };
 
 export default function SearchBar() {
-  const role = useAuthStore((state) => state.role);
-  const isAdmin = isAdminRole(role);
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [showPremiumOverlay, setShowPremiumOverlay] = useState(false);
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
-  const [adminTenants, setAdminTenants] = useState([]);
-  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
-  const [tenantsError, setTenantsError] = useState("");
-  const [tenantReloadKey, setTenantReloadKey] = useState(0);
+  const [clinics, setClinics] = useState([]);
+  const [isLoadingClinics, setIsLoadingClinics] = useState(false);
+  const [clinicsError, setClinicsError] = useState("");
+  const [needsAuth, setNeedsAuth] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
+  // Үүргээс ҮЛ ХАМААРАН бүх хэрэглэгчид бодит дата (mock бүрэн устсан).
   useEffect(() => {
-    if (!isAdmin) {
-      setAdminTenants([]);
-      setIsLoadingTenants(false);
-      setTenantsError("");
-      return undefined;
-    }
-
     const controller = new AbortController();
-    setIsLoadingTenants(true);
-    setTenantsError("");
+    setIsLoadingClinics(true);
+    setClinicsError("");
+    setNeedsAuth(false);
 
+    // API layer route солихгүй; 401-ийг модал дотор өөрсдөө боловсруулна.
     getClinics({ signal: controller.signal })
       .then((data) => {
-        const tenants = Array.isArray(data) ? data : data?.items || data?.data || [];
-        setAdminTenants(tenants.map(normalizeTenant));
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setClinics(list.map(normalizeTenant));
       })
       .catch((error) => {
-        if (error.name !== "AbortError") {
-          setAdminTenants([]);
-          setTenantsError(error.message);
+        if (error.name === "AbortError") return;
+
+        setClinics([]);
+        if (error.status === 401) {
+          setNeedsAuth(true);
+        } else {
+          setClinicsError(error.message);
         }
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          setIsLoadingTenants(false);
+          setIsLoadingClinics(false);
         }
       });
 
     return () => controller.abort();
-  }, [isAdmin, tenantReloadKey]);
+  }, [reloadKey]);
 
-  const searchItems = isAdmin ? adminTenants : mockResults;
-  const retryTenants = () => setTenantReloadKey((value) => value + 1);
+  const searchItems = clinics;
+  const retryTenants = () => setReloadKey((value) => value + 1);
 
   const handleSearch = () => {
     if (window.innerWidth < 768) {
@@ -534,9 +567,9 @@ export default function SearchBar() {
             query={query}
             setQuery={setQuery}
             items={searchItems}
-            isAdmin={isAdmin}
-            isLoading={isLoadingTenants}
-            error={tenantsError}
+            isLoading={isLoadingClinics}
+            error={clinicsError}
+            needsAuth={needsAuth}
             onRetry={retryTenants}
           />
         )}
@@ -547,9 +580,9 @@ export default function SearchBar() {
             query={query}
             setQuery={setQuery}
             items={searchItems}
-            isAdmin={isAdmin}
-            isLoading={isLoadingTenants}
-            error={tenantsError}
+            isLoading={isLoadingClinics}
+            error={clinicsError}
+            needsAuth={needsAuth}
             onRetry={retryTenants}
           />
         )}

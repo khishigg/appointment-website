@@ -24,7 +24,7 @@ export default function ExpertsSection() {
             Манай мэргэжилтнүүд
           </motion.h2>
           <motion.p
-            className="text-body text-gray-600 mx-auto max-w-500"
+            className="text-legacy-body text-gray-600 mx-auto max-w-500"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -59,7 +59,7 @@ export default function ExpertsSection() {
                   {/* 📝 Doctor Info */}
                   <div className="mb-3">
                     <h3 className="text-h3 mb-1">{doc.name}</h3>
-                    <p className="text-body-sm text-gray-500 mb-2">{doc.spec}</p>
+                    <p className="text-legacy-body-sm text-gray-500 mb-2">{doc.spec}</p>
 
                     <div className="d-flex justify-content-center align-items-center gap-2">
                       <Badge variant="primary" size="sm">
@@ -73,7 +73,7 @@ export default function ExpertsSection() {
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="text-start">
                         <span className="text-body-xs d-block text-gray-400">Боломжит цаг:</span>
-                        <span className="text-body-sm fw-bold text-navy-900">{doc.time}</span>
+                        <span className="text-legacy-body-sm fw-bold text-navy-900">{doc.time}</span>
                       </div>
                       <Badge variant="success" size="sm">Нээлттэй</Badge>
                     </div>

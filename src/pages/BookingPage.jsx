@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import {
     ClinicProfile,
+    ClinicAbout,
     BranchSelector,
     ServiceSelector,
     LocationSelector,
@@ -25,8 +26,8 @@ import {
     resolveClinicAssetUrl,
 } from '../api/clinics';
 import { normalizeProduct } from '../api/appointments';
-import { isAdminRole, useAuthStore } from '../store/AuthStore';
 import { useBookingStore } from '../store/BookingStore';
+import SearchBar from '../components/SearchBar';
 
 const asList = (value) => {
     if (Array.isArray(value)) return value;
@@ -45,18 +46,44 @@ const normalizeClinicDetail = (clinic, fallbackId) => ({
     email: clinic.email ?? clinic.Email ?? '',
     socialAddressUrl: clinic.socialAddressUrl ?? clinic.SocialAddressUrl ?? '',
     workingHours: clinic.workingHoursJson ?? clinic.WorkingHoursJson ?? '',
-    isAdminTenant: true,
 });
+
+// Хаягийн хэсгүүдийг давхардуулахгүйгээр нэгтгэнэ.
+// Backend нь Address ба Address2-т ИЖИЛ бүтэн мөр буцаадаг (мөн City/State/Zip нь
+// Address дотор аль хэдийн орсон байдаг) тул энгийн join хийвэл хаяг үг үсгээрээ
+// давхарлаж харагддаг: "BGD - 11 khoroo, Ulaanbaatar 16060, BGD - 11 khoroo, Ulaanbaatar 16060".
+const joinAddressParts = (parts) => {
+    const cleaned = parts
+        .map((part) => String(part ?? '').trim())
+        .filter(Boolean);
+
+    // Өөр хэсэгт аль хэдийн агуулагдсан хэсгийг хаяна — ингэснээр хамгийн БҮРЭН
+    // хувилбар үлдэнэ. Яг ижил давхардлаас зөвхөн эхнийхийг авна.
+    const kept = cleaned.filter((part, index) => {
+        const needle = part.toLowerCase();
+
+        return !cleaned.some((other, otherIndex) => {
+            if (otherIndex === index) return false;
+
+            const haystack = other.toLowerCase();
+            if (!haystack.includes(needle)) return false;
+
+            return haystack.length > needle.length || otherIndex < index;
+        });
+    });
+
+    return kept.join(', ');
+};
 
 const normalizeBranch = (branch, clinicId) => {
     const clinicNum = branch.clinicNum ?? branch.ClinicNum;
-    const address = [
+    const address = joinAddressParts([
         branch.address ?? branch.Address,
         branch.address2 ?? branch.Address2,
         branch.city ?? branch.City,
         branch.state ?? branch.State,
         branch.zip ?? branch.Zip,
-    ].filter(Boolean).join(', ');
+    ]);
 
     return {
         ...branch,
@@ -107,8 +134,6 @@ const normalizeProvider = (provider, clinicId) => {
 
 export default function BookingPage() {
     const [searchParams] = useSearchParams();
-    const role = useAuthStore((state) => state.role);
-    const isAdmin = isAdminRole(role);
     const clinicId = searchParams.get('clinicId') ?? searchParams.get('tenantId');
     const [activeClinicTab, setActiveClinicTab] = useState('salbar');
     const [tenant, setTenant] = useState(null);
@@ -191,7 +216,7 @@ export default function BookingPage() {
         setIsLoadingProviders(false);
         setIsLoadingProducts(false);
 
-        if (!isAdmin || !clinicId) {
+        if (!clinicId) {
             setTenant(null);
             setIsLoadingTenant(false);
             setTenantError('');
@@ -278,13 +303,13 @@ export default function BookingPage() {
             });
 
         return () => controller.abort();
-    }, [clinicId, isAdmin, reloadKey, resetBooking, setSelectedClinic]);
+    }, [clinicId, reloadKey, resetBooking, setSelectedClinic]);
 
     useEffect(() => {
-        if (!isAdmin || !clinicId) return undefined;
+        if (!clinicId) return undefined;
         loadProviders(selectedBranch);
         return () => providerController.current?.abort();
-    }, [isAdmin, clinicId, selectedBranch, reloadKey, loadProviders]);
+    }, [clinicId, selectedBranch, reloadKey, loadProviders]);
 
     useEffect(() => () => providerController.current?.abort(), []);
 
@@ -300,37 +325,22 @@ export default function BookingPage() {
     // Таб бүрийн агуулгыг хоёр бүсэд хуваана:
     //   top    — бүтэн өргөн (салбар/үйлчилгээ/хаяг)
     //   railed — захиалгын рэйлтэй хослох (ЗӨВХӨН эмчийн жагсаалт)
-    const renderNonAdminTabContent = () => {
-        if (activeClinicTab === 'service') {
-            return { top: <ServiceSelector />, railed: null };
-        }
-
-        if (activeClinicTab === 'doctor') {
-            return { top: null, railed: <DoctorSelector /> };
-        }
-
-        if (activeClinicTab === 'location') {
-            return {
-                top: <LocationSelector useMockData onBookBranch={handleBookBranch} />,
-                railed: null,
-            };
-        }
-
-        return { top: <BranchSelector />, railed: null };
-    };
-
     const reloadLists = useCallback(() => setReloadKey((value) => value + 1), []);
 
-    const renderAdminTabContent = () => {
-        const adminDoctorList = (
+    const renderApiTabContent = () => {
+        const apiDoctorList = (
             <DoctorSelector
                 doctors={providers}
-                isAdmin
+                isApiDriven
                 isLoading={isLoadingBranches || isLoadingProviders}
                 error={providerError}
                 onRetry={() => loadProviders(selectedBranch)}
             />
         );
+
+        if (activeClinicTab === 'about') {
+            return { top: <ClinicAbout clinic={clinic} />, railed: null };
+        }
 
         if (activeClinicTab === 'service') {
             return {
@@ -347,7 +357,7 @@ export default function BookingPage() {
         }
 
         if (activeClinicTab === 'doctor') {
-            return { top: null, railed: adminDoctorList };
+            return { top: null, railed: apiDoctorList };
         }
 
         if (activeClinicTab === 'location') {
@@ -371,47 +381,42 @@ export default function BookingPage() {
             top: (
                 <BranchSelector
                     branches={branches}
-                    isAdmin
                     isLoading={isLoadingBranches}
                     error={branchError}
                     onRetry={() => setReloadKey((value) => value + 1)}
                 />
             ),
-            railed: <div className="border-t border-line-soft bg-surface">{adminDoctorList}</div>,
+            railed: <div className="border-t border-line-soft bg-surface">{apiDoctorList}</div>,
         };
     };
 
-    // Non-admin нь mock өгөгдөлтэй тул үргэлж харагдана; admin нь эмнэлэг ачаалагдсаны дараа.
-    const showBookingContent = !isAdmin || Boolean(clinicId && clinic && !isLoadingTenant);
+
+    const showBookingContent = Boolean(clinicId && clinic && !isLoadingTenant);
 
     // Захиалгын рэйл нь ЗӨВХӨН эмчийн жагсаалт дэлгэц дээр байхад утгатай.
-    // Admin-ийн 'salbar' таб нь BranchSelector + DoctorSelector хоёуланг рендэрлэдэг.
-    const showRail = activeClinicTab === 'doctor' || (isAdmin && activeClinicTab === 'salbar');
+    // API-driven 'salbar' таб нь BranchSelector + DoctorSelector хоёуланг рендэрлэдэг.
+    const showRail = activeClinicTab === 'doctor' || activeClinicTab === 'salbar';
 
     const tabContent = showBookingContent
-        ? (isAdmin ? renderAdminTabContent() : renderNonAdminTabContent())
+        ? renderApiTabContent()
         : { top: null, railed: null };
 
     return (
         <div className="min-h-screen bg-canvas pb-20 lg:pb-8">
-            {!isAdmin ? (
-                <ClinicProfile
-                    activeTab={activeClinicTab}
-                    onTabChange={setActiveClinicTab}
-                />
-            ) : null}
-
-            {isAdmin && !clinicId ? (
-                <div className="tenant-detail-state">
-                    Дэлгэрэнгүй харахын тулд нүүр хуудаснаас эмнэлэг сонгоно уу.
+            {!clinicId ? (
+                <div className="mx-auto max-w-[900px] px-4 py-10 md:px-6">
+                    <div className="tenant-detail-state mb-6">
+                        Цаг авахын тулд эмнэлгээ сонгоно уу.
+                    </div>
+                    <SearchBar />
                 </div>
             ) : null}
 
-            {isAdmin && isLoadingTenant ? (
+            {clinicId && isLoadingTenant ? (
                 <div className="tenant-detail-state">Эмнэлгийн мэдээллийг уншиж байна...</div>
             ) : null}
 
-            {isAdmin && tenantError ? (
+            {clinicId && tenantError ? (
                 <div className="tenant-detail-state tenant-detail-state--error" role="alert">
                     <span>{tenantError}</span>
                     <button type="button" onClick={() => setReloadKey((value) => value + 1)}>
@@ -420,7 +425,7 @@ export default function BookingPage() {
                 </div>
             ) : null}
 
-            {isAdmin && clinic && !isLoadingTenant ? (
+            {clinicId && clinic && !isLoadingTenant ? (
                 <ClinicProfile
                     clinic={clinic}
                     activeTab={activeClinicTab}
@@ -433,26 +438,22 @@ export default function BookingPage() {
                     hasRail={showRail}
                     top={tabContent.top}
                     left={tabContent.railed}
-                    rail={(
-                        // BookingDetails-ийг ГАНЦ газарт төвлөрүүлэв (өмнө admin/non-admin
-                        // салаа тус бүрд давхар байсан). BookingRail нь desktop дээр рэйл
-                        // дотор, mobile/tablet дээр шууд дамжуулж рендэрлэнэ.
-                        <BookingRail visible={showRail}>
-                            <BookingDetails
-                                {...(isAdmin ? {
-                                    products,
-                                    isLoadingProducts,
-                                    productError,
-                                    onReloadLists: reloadLists,
-                                } : {})}
-                            />
-                        </BookingRail>
-                    )}
+                    rail={<BookingRail visible={showRail} />}
                 />
             ) : null}
 
-            {/* Overlay — desktop дээр өөрөө null буцаана (тэнд рэйл эзэмшинэ) */}
+            {/* ===== Overlay-ууд =====
+                Хоёулаа хуудасны төвшинд, ГАНЦ газраас, БҮХ таб/breakpoint дээр ҮРГЭЛЖ
+                mount хэвээр рендэрлэгдэнэ (хаалттай үедээ өөрсдөө null буцаана).
+                Нөхцөлтэйгээр рендэрлэвэл 409 алдааны дараа `step` болон формын
+                өгөгдөл алдагдана. */}
             <TimeSlotModal />
+            <BookingDetails
+                products={products}
+                isLoadingProducts={isLoadingProducts}
+                productError={productError}
+                onReloadLists={reloadLists}
+            />
         </div>
     );
 }

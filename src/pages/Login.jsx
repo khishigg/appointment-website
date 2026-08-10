@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { isAdminRole, useAuthStore } from '../store/AuthStore';
+import { useAuthStore } from '../store/AuthStore';
 import logo from '../assets/ashid_soft_logo.png';
 
 export default function Login() {
@@ -29,11 +29,12 @@ export default function Login() {
     setError('');
     setIsLoading(true);
 
-    const result = await login(username.trim(), password);
+    const result = await login(username.trim(), password, rememberMe);
     if (result.success) {
-      const requestedPath = location.state?.from?.pathname;
-      const isAdmin = isAdminRole(result.role);
-      const destination = isAdmin ? '/' : requestedPath || '/booking';
+      const requestedLocation = location.state?.from;
+      const destination = requestedLocation?.pathname
+        ? `${requestedLocation.pathname}${requestedLocation.search || ''}${requestedLocation.hash || ''}`
+        : '/';
 
       navigate(destination, { replace: true });
     } else {

@@ -248,13 +248,18 @@ const MapDiscoveryModal = ({ isOpen, onClose }) => {
                             <div className="hospital-actions-bar">
                                 <button
                                     type="button"
+                                    disabled={!selectedHospital.clinicId}
                                     onClick={() => {
+                                        if (!selectedHospital.clinicId) return;
                                         onClose();
-                                        navigate('/booking', { state: { hospital: selectedHospital } });
+                                        navigate(`/booking?clinicId=${encodeURIComponent(selectedHospital.clinicId)}`, {
+                                            state: { hospital: selectedHospital },
+                                        });
                                     }}
                                     className="hospital-btn-book"
+                                    title={!selectedHospital.clinicId ? 'Энэ эмнэлэгт онлайн цаг авах мэдээлэл холбогдоогүй байна.' : undefined}
                                 >
-                                    Цаг захиалах
+                                    {selectedHospital.clinicId ? 'Цаг захиалах' : 'Онлайн цаг байхгүй'}
                                 </button>
                                 <button type="button" className="hospital-btn-nav">
                                     <FiNavigation size={18} />

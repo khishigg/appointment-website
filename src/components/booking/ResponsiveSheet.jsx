@@ -7,8 +7,9 @@ import useDialogA11y from '../../hooks/useDialogA11y';
  * Booking-ийн ганц presentation primitive: нэг агуулгыг гурван бүрхүүлээр рендэрлэнэ.
  *
  *   'sheet'  (mobile)  — доороос гарах bottom sheet, бүтэн дэлгэц
- *   'dialog' (tablet)  — төвлөрсөн цонх, backdrop харагдана
- *   'inline' (desktop) — overlay/backdrop/role="dialog" ОГТ БАЙХГҮЙ, зүгээр л панель
+ *   'dialog' (tablet)  — төвлөрсөн цонх (640px), backdrop харагдана
+ *   'wide'   (desktop) — төвлөрсөн цонх (960px), дотроо 2 багана багтаана
+ *   'inline'           — overlay/backdrop/role="dialog" ОГТ БАЙХГҮЙ, зүгээр л панель
  *
  * Агуулга (children) бүх горимд ижил — зөвхөн бүрхүүл солигдоно.
  */
@@ -34,6 +35,14 @@ const DIALOG_VARIANTS = {
 
 const SPRING = { type: 'spring', damping: 28, stiffness: 220 };
 const EASE = { duration: 0.2, ease: [0.16, 1, 0.3, 1] };
+
+// Төвлөрсөн цонхны хэмжээ — бүрхүүл нь ижил, зөвхөн хэмжээ ялгаатай.
+// `wide` нь агуулгаар өсдөггүй ТОГТМОЛ өндөртэй: ингэснээр баруун талын хураангуй
+// карт хэзээ ч гүйхгүй, зөвхөн зүүн жагсаалт гүйнэ.
+const DIALOG_SIZE = {
+    dialog: 'w-[min(640px,92vw)] max-h-[88vh]',
+    wide: 'w-[min(960px,94vw)] h-[min(680px,88vh)]',
+};
 
 export default function ResponsiveSheet({
     mode = 'sheet',
@@ -102,7 +111,7 @@ export default function ResponsiveSheet({
                             className={
                                 isSheet
                                     ? `absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden bg-surface outline-none ${className}`
-                                    : `pointer-events-auto flex max-h-[88vh] w-[min(640px,92vw)] flex-col overflow-hidden rounded-panel bg-surface shadow-modal outline-none ${className}`
+                                    : `pointer-events-auto flex ${DIALOG_SIZE[mode] || DIALOG_SIZE.dialog} flex-col overflow-hidden rounded-panel bg-surface shadow-modal outline-none ${className}`
                             }
                         >
                             {children}

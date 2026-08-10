@@ -5,19 +5,24 @@ export const AUTH_STORAGE_KEY = 'ashid_auth';
 
 export const readStoredAuth = () => {
     try {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        const stored =
+            localStorage.getItem(AUTH_STORAGE_KEY) ||
+            sessionStorage.getItem(AUTH_STORAGE_KEY);
         return stored ? JSON.parse(stored) : null;
     } catch {
         return null;
     }
 };
 
-const writeStoredAuth = ({ token, user, role }) => {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user, role }));
+const writeStoredAuth = ({ token, user, role }, rememberMe) => {
+    clearStoredAuth();
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user, role }));
 };
 
 const clearStoredAuth = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
 };
 
 const decodeJwtPayload = (token) => {
@@ -59,7 +64,19 @@ const normalizeUser = (user, username, role) => {
     };
 };
 
-const storedAuth = readStoredAuth();
+const rawStoredAuth = readStoredAuth();
+const storedPayload = rawStoredAuth?.token
+    ? decodeJwtPayload(rawStoredAuth.token)
+    : null;
+const isStoredTokenExpired =
+    typeof storedPayload?.exp === 'number' &&
+    storedPayload.exp * 1000 <= Date.now();
+
+if (isStoredTokenExpired) {
+    clearStoredAuth();
+}
+
+const storedAuth = isStoredTokenExpired ? null : rawStoredAuth;
 const storedRole =
     storedAuth?.role ||
     storedAuth?.user?.role ||
@@ -71,13 +88,13 @@ export const useAuthStore = create((set) => ({
     role: storedRole || null,
     isAuthenticated: Boolean(storedAuth?.token),
 
-    login: async (username, password) => {
+    login: async (username, password, rememberMe = true) => {
         try {
             const data = await loginRequest({ username, password });
             const role = getRoleFromToken(data.token);
             const user = normalizeUser(data.user, username, role);
 
-            writeStoredAuth({ token: data.token, user, role });
+            writeStoredAuth({ token: data.token, user, role }, rememberMe);
             set({
                 token: data.token,
                 user,
@@ -94,6 +111,28 @@ export const useAuthStore = create((set) => ({
                 error: error.message || 'Нэвтрэх нэр эсвэл нууц үг буруу байна.',
             };
         }
+    },
+
+    loginWithToken: (token, patientInfo = {}) => {
+        if (!token) {
+            throw new Error('Нэвтрэх token олдсонгүй.');
+        }
+
+        const role = getRoleFromToken(token);
+        const fullName = [patientInfo.lastName, patientInfo.firstName]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        const user = {
+            username: patientInfo.email || patientInfo.phone || 'Хэрэглэгч',
+            name: fullName || patientInfo.email || 'Хэрэглэгч',
+            role,
+        };
+
+        writeStoredAuth({ token, user, role }, true);
+        set({ token, user, role, isAuthenticated: true });
+
+        return { success: true, role };
     },
 
     logout: () => {

@@ -8,36 +8,33 @@ import TimeSlotPanel from './TimeSlotPanel';
 /**
  * BookingRail — desktop-ийн баруун талын захиалгын хэсэг.
  *
- * Mobile/tablet дээр, эсвэл `visible=false` (эмчийн жагсаалтгүй таб) үед ЗӨВХӨН
- * children-ээ дамжуулна — ингэснээр `children` (BookingDetails) нь бүх breakpoint,
- * бүх таб дээр React-ийн ИЖИЛ байрлалд, ганц удаа mount хийгддэг тул `step` зэрэг
- * state хэзээ ч алдагдахгүй, mobile дээр overlay мөн алга болохгүй.
+ * Mobile/tablet дээр, эсвэл `visible=false` (эмчийн жагсаалтгүй таб) үед юу ч рендэрлэхгүй.
+ *
+ * Рэйл нь ЗӨВХӨН цаг сонголтыг эзэмшинэ. Захиалгын алхмууд (BookingDetails) нь бүх
+ * breakpoint дээр overlay болсон тул BookingPage-д тусад нь, үргэлж mount хэвээр байна.
  *
  * Рэйлийн төлөв нь ОДОО БАЙГАА store-оос гарна (шинэ state нэмээгүй):
  *   эмч сонгоогүй            → 'empty'
- *   isBookingDetailsOpen     → 'details'
- *   isTimeSlotModalOpen      → 'slots'
+ *   isTimeSlotModalOpen      → 'slots'  (захиалга нээлттэй үед ч цагууд ард харагдана)
  *   бусад (эмч сонгосон)     → 'doctor'
  */
-export default function BookingRail({ visible = true, children }) {
+export default function BookingRail({ visible = true }) {
     const layout = useBookingLayout();
     const {
         selectedDoctor,
         selectedTimeSlot,
         selectTimeSlot,
         isTimeSlotModalOpen,
-        isBookingDetailsOpen,
         openBookingDetails,
         initialScrollDate,
         availabilityRefreshKey,
     } = useBookingStore();
 
-    if (layout !== 'desktop' || !visible) return children;
+    if (layout !== 'desktop' || !visible) return null;
 
     let view = 'empty';
     if (selectedDoctor) {
-        if (isBookingDetailsOpen) view = 'details';
-        else if (isTimeSlotModalOpen) view = 'slots';
+        if (isTimeSlotModalOpen) view = 'slots';
         else view = 'doctor';
     }
 
@@ -48,10 +45,10 @@ export default function BookingRail({ visible = true, children }) {
         openBookingDetails();
     };
 
-    const showSlots = view === 'slots' || view === 'details';
-
     return (
-        <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
+        // top-14 (56px) — ClinicProfile-ийн sticky таб барын өндөр (py-4 + text-sm + border
+        // ≈ 53px). Эс тэгвэл рэйл гүйхдээ таб барын доогуур ормоор харагдана.
+        <aside className="lg:sticky lg:top-14 lg:h-[calc(100vh-4.5rem)]">
             <ResponsiveSheet mode="inline" label="Захиалгын хэсэг">
                 {view === 'empty' ? (
                     <RailPlaceholder
@@ -72,11 +69,11 @@ export default function BookingRail({ visible = true, children }) {
                     </>
                 ) : null}
 
-                {/* Цагийн панель: 'details' үед UNMOUNT ХИЙХГҮЙ, зөвхөн нуух —
-                    эс тэгвэл "Буцах" дарахад бүх availability дахин татагдана.
-                    Ганц instance тул давхар fetch үүсэхгүй. */}
-                {showSlots && selectedDoctor ? (
-                    <div className={view === 'details' ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}>
+                {/* Захиалгын цонх нээлттэй үед ч цагийн панель mount хэвээр — "Буцах"
+                    дарахад availability дахин татагдахгүй. Ганц instance тул давхар
+                    fetch үүсэхгүй. */}
+                {view === 'slots' && selectedDoctor ? (
+                    <div className="flex min-h-0 flex-1 flex-col">
                         <RailHeader doctor={selectedDoctor} />
                         <TimeSlotPanel
                             variant="inline"
@@ -88,10 +85,6 @@ export default function BookingRail({ visible = true, children }) {
                         />
                     </div>
                 ) : null}
-
-                {/* ҮРГЭЛЖ mount хэвээр — BookingDetails хаалттай үедээ өөрөө null буцаана.
-                    Нөхцөлтэйгээр рендэрлэвэл 409-ийн дараа `step` алдагдана. */}
-                {children}
             </ResponsiveSheet>
         </aside>
     );

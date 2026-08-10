@@ -64,18 +64,8 @@ export default function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccess('Бүртгэл амжилттай үүслээ! Нэвтрэх хуудас руу шилжиж байна...');
-
-      setTimeout(() => {
-        navigate('/login', {
-          state: { registeredEmail: formData.email, message: 'Бүртгэл амжилттай. Системд нэвтэрнэ үү.' }
-        });
-      }, 1200);
-    }, 800);
+    setIsLoading(false);
+    setError('Бүртгэлийн backend үйлчилгээ одоогоор холбогдоогүй байна. Та Guest хэлбэрээр цаг захиалж болно.');
   };
 
   return (

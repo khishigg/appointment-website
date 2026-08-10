@@ -4,7 +4,10 @@ export const clinicApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const getToken = () => {
     try {
-        const auth = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null');
+        const stored =
+            localStorage.getItem(AUTH_STORAGE_KEY) ||
+            sessionStorage.getItem(AUTH_STORAGE_KEY);
+        const auth = JSON.parse(stored || 'null');
         return auth?.token || null;
     } catch {
         return null;
@@ -36,14 +39,6 @@ const getStatusMessage = (status) => {
             return 'Эмнэлгийн мэдээллийн сантай холбогдоход алдаа гарлаа.';
         default:
             return null;
-    }
-};
-
-const redirectToLogin = () => {
-    useAuthStore.getState().logout();
-
-    if (window.location.pathname !== '/login') {
-        window.location.replace('/login');
     }
 };
 
@@ -89,7 +84,12 @@ const validateAvailabilityQuery = ({ startDate, endDate, slotDuration }) => {
 
 export async function clinicRequest(
     path,
-    { signal, method = 'GET', body, preferServerMessage = false } = {}
+    {
+        signal,
+        method = 'GET',
+        body,
+        preferServerMessage = false,
+    } = {}
 ) {
     const token = getToken();
     const headers = {
@@ -127,8 +127,10 @@ export async function clinicRequest(
         );
         error.status = response.status;
 
+        // Хугацаа дууссан session-ийг Guest төлөвт буцаана, гэхдээ одоогийн route-оос
+        // хэзээ ч гаргахгүй. Guest-ийн 401 дээр logout нь no-op байна.
         if (response.status === 401) {
-            redirectToLogin();
+            useAuthStore.getState().logout();
         }
 
         throw error;

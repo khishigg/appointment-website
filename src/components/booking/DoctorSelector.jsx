@@ -88,7 +88,7 @@ const buildNextSevenDays = () => {
 
 export default function DoctorSelector({
     doctors = defaultDoctors,
-    isAdmin = false,
+    isApiDriven = false,
     isLoading = false,
     error = '',
     onRetry,
@@ -103,11 +103,11 @@ export default function DoctorSelector({
     } = useBookingStore();
     const [expandedBios, setExpandedBios] = useState({});
 
-    // Admin горимд backend аль хэдийн салбараар шүүсэн жагсаалт буцаадаг тул клиент талд
+    // API-driven горимд backend аль хэдийн салбараар шүүсэн жагсаалт буцаадаг тул клиент талд
     // дахин шүүхгүй (clinicNum ба tenant id-г хольж харьцуулах алдаа ингэж арилна).
     // Mock (non-admin) өгөгдөл дээр л branchIds-аар шүүнэ.
     // provNum-гүй эмч байвал availability дуудах боломжгүй тул жагсаалтаас алгасна.
-    const filteredDoctors = isAdmin
+    const filteredDoctors = isApiDriven
         ? doctors.filter((doc) => resolveDoctorProvNum(doc) != null)
         : (selectedBranch
             ? doctors.filter((doc) => doc.branchIds?.includes(selectedBranch.id))
@@ -117,11 +117,11 @@ export default function DoctorSelector({
         setExpandedBios(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    if (isAdmin && isLoading) {
+    if (isApiDriven && isLoading) {
         return <div className="booking-data-state">Эмчийн жагсаалтыг уншиж байна...</div>;
     }
 
-    if (isAdmin && error) {
+    if (isApiDriven && error) {
         return (
             <div className="booking-data-state booking-data-state--error" role="alert">
                 <span>{error}</span>
@@ -141,7 +141,7 @@ export default function DoctorSelector({
                 </h2>
             </div>
 
-            {isAdmin && filteredDoctors.length === 0 ? (
+            {isApiDriven && filteredDoctors.length === 0 ? (
                 <div className="booking-data-state">
                     {selectedBranch
                         ? 'Энэ салбарт бүртгэлтэй эмч олдсонгүй.'
@@ -152,11 +152,11 @@ export default function DoctorSelector({
             <div className="divide-y divide-line-soft">
                 {filteredDoctors.map((doctor) => {
                     const isBioExpanded = expandedBios[doctor.id];
-                    const displayImage = isAdmin ? genericDoctorImage : doctor.image;
-                    const displaySpecialty = isAdmin
+                    const displayImage = isApiDriven ? genericDoctorImage : doctor.image;
+                    const displaySpecialty = isApiDriven
                         ? GENERIC_DOCTOR_SPECIALTY
                         : doctor.specialty;
-                    const displayBio = isAdmin ? GENERIC_DOCTOR_BIO : doctor.bio;
+                    const displayBio = isApiDriven ? GENERIC_DOCTOR_BIO : doctor.bio;
 
                     return (
                         <div key={doctor.id} className="p-4 md:p-6 transition-colors hover:bg-hover-surface/20">
@@ -237,7 +237,7 @@ export default function DoctorSelector({
 
                                 <DoctorAvailability
                                     doctor={doctor}
-                                    lazy={isAdmin}
+                                    lazy={isApiDriven}
                                     refreshKey={availabilityRefreshKey}
                                     selectDoctor={selectDoctor} 
                                     openTimeSlotModal={openTimeSlotModal}

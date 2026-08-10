@@ -33,7 +33,7 @@ export default function ServiceCard({
 
     const header = (
         <span className="min-w-0">
-            <span className="block text-base font-semibold leading-tight text-heading">
+            <span className="block text-base font-semibold leading-tight text-heading lg:text-sm">
                 {name}
             </span>
             {subtitle ? (
@@ -44,9 +44,11 @@ export default function ServiceCard({
         </span>
     );
 
+    // lg: нягтрал — min-h авч, padding багасгаснаар нэг дэлгэцэнд илүү олон үйлчилгээ
+    // багтана (desktop хулгана нь мэдрэгчийн target хэмжээ шаарддаггүй).
     return (
         <article
-            className={`min-h-[108px] rounded-card border px-4 pt-4 pb-3.5 shadow-card transition-colors ${
+            className={`min-h-[108px] rounded-card border px-4 pt-4 pb-3.5 shadow-card transition-colors lg:min-h-0 lg:px-3.5 lg:pt-3 lg:pb-3 ${
                 selected ? 'border-selected-border bg-selected-bg ring-1 ring-selected-border' : 'border-line bg-surface'
             } ${isSelectable ? 'cursor-pointer' : ''}`}
             role={isSelectable ? 'radio' : undefined}
