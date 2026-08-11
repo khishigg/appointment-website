@@ -7,6 +7,7 @@ import BookingSummaryCard from './BookingSummaryCard';
 import RegistrationPrompt from './RegistrationPrompt';
 import IdentityMethodPrompt from './IdentityMethodPrompt';
 import EmailOtpPrompt from './EmailOtpPrompt';
+import PasswordSetupPrompt from './PasswordSetupPrompt';
 
 /**
  * BookingDetailsPanel — захиалгын алхмуудын АГУУЛГА (header + step + footer).
@@ -28,6 +29,7 @@ export default function BookingDetailsPanel({
     selectedClinic,
     handleServiceSelect,
     patientInfo,
+    showPersonalInfoForm,
     handleInputChange,
     isPhoneValid,
     isEmailValid,
@@ -51,10 +53,20 @@ export default function BookingDetailsPanel({
     isIdentityMethodPromptOpen,
     isIdentityMethodPromptBusy,
     isEmailOtpPromptOpen,
+    isPasswordSetupPromptOpen,
+    passwordSetupIdentity,
+    password,
+    confirmPassword,
+    passwordSetupError,
+    isSettingPassword,
     onAcceptRegistration,
     onDeclineRegistration,
     onSelectEmailIdentity,
     onBackToIdentityMethod,
+    onPasswordChange,
+    onConfirmPasswordChange,
+    onPasswordSetupSubmit,
+    onBackFromPasswordSetup,
     canViewBookings,
     onBack,
     onContinue,
@@ -92,6 +104,7 @@ export default function BookingDetailsPanel({
                             selectedService={selectedService}
                             handleServiceSelect={handleServiceSelect}
                             patientInfo={patientInfo}
+                            showPersonalInfoForm={showPersonalInfoForm}
                             handleInputChange={handleInputChange}
                             isPhoneValid={isPhoneValid}
                             isEmailValid={isEmailValid}
@@ -195,6 +208,20 @@ export default function BookingDetailsPanel({
                     onCodeChange={onOtpChange}
                     onResend={onResendOtp}
                     onBack={onBackToIdentityMethod}
+                />
+            ) : null}
+
+            {isPasswordSetupPromptOpen ? (
+                <PasswordSetupPrompt
+                    verifiedIdentity={passwordSetupIdentity}
+                    password={password}
+                    confirmPassword={confirmPassword}
+                    error={passwordSetupError}
+                    isSubmitting={isSettingPassword}
+                    onPasswordChange={onPasswordChange}
+                    onConfirmPasswordChange={onConfirmPasswordChange}
+                    onSubmit={onPasswordSetupSubmit}
+                    onBack={onBackFromPasswordSetup}
                 />
             ) : null}
         </>

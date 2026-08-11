@@ -14,6 +14,7 @@ export default function BookingStepContent({
     selectedService,
     handleServiceSelect,
     patientInfo,
+    showPersonalInfoForm,
     handleInputChange,
     isPhoneValid,
     isEmailValid,
@@ -97,7 +98,7 @@ export default function BookingStepContent({
                 </Motion.div>
             )}
 
-            {step === 2 && (
+            {step === 2 && showPersonalInfoForm && (
                 <Motion.div
                     key="step2"
                     variants={slideVariants}
@@ -200,6 +201,31 @@ export default function BookingStepContent({
                             )}
                         </div>
                     )}
+                </Motion.div>
+            )}
+
+            {step === 2 && !showPersonalInfoForm && submitError && (
+                <Motion.div
+                    key="account-booking-error"
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.2 }}
+                    className="space-y-5"
+                >
+                    <div className="rounded-panel border border-danger bg-danger-surface p-4" role="alert">
+                        <p className="text-sm font-medium text-danger-text">{submitError}</p>
+                        {needsNewTimeSlot && (
+                            <button
+                                type="button"
+                                onClick={onPickAnotherTimeSlot}
+                                className="mt-3 w-full rounded-control bg-primary py-2.5 text-sm font-semibold text-primary-text transition-all active:scale-[0.98]"
+                            >
+                                Өөр цаг сонгох
+                            </button>
+                        )}
+                    </div>
                 </Motion.div>
             )}
 

@@ -27,6 +27,21 @@ export const verifyBookingEmailOtp = ({ clinicId, bookingId, bookingToken, code,
         { signal }
     );
 
+export const setupBookingPassword = ({
+    clinicId,
+    bookingId,
+    bookingToken,
+    passwordSetupToken,
+    password,
+    confirmPassword,
+    signal,
+}) =>
+    bookingIdentityRequest(
+        `/api/clinics/${encodeURIComponent(clinicId)}/appointment-bookings/${encodeURIComponent(bookingId)}/identity/password`,
+        { bookingToken, passwordSetupToken, password, confirmPassword },
+        { signal }
+    );
+
 export const declineBookingIdentity = ({ clinicId, bookingId, bookingToken, signal }) =>
     bookingIdentityRequest(
         `/api/clinics/${encodeURIComponent(clinicId)}/appointment-bookings/${encodeURIComponent(bookingId)}/identity/decline`,

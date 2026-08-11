@@ -6,6 +6,7 @@ import {
     createAppointmentBooking,
     declineBookingIdentity,
     sendBookingEmailOtp,
+    setupBookingPassword,
     verifyBookingEmailOtp,
 } from '../../api/appointmentBookings';
 import { useAuthStore } from '../../store/AuthStore';
@@ -22,6 +23,29 @@ const SLIDE_VARIANTS = {
     enter: { opacity: 0, y: -30 },
     center: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: 30 },
+};
+
+const getPasswordSetupErrorMessage = (error) => {
+    const errors = error?.errors;
+
+    if (Array.isArray(errors)) {
+        const messages = errors
+            .map((item) => item?.description || item?.message || (typeof item === 'string' ? item : ''))
+            .filter(Boolean);
+
+        if (messages.length) return messages.join(' ');
+    }
+
+    if (errors && typeof errors === 'object') {
+        const messages = Object.values(errors)
+            .flatMap((item) => Array.isArray(item) ? item : [item])
+            .map((item) => typeof item === 'string' ? item : item?.description || item?.message || '')
+            .filter(Boolean);
+
+        if (messages.length) return messages.join(' ');
+    }
+
+    return error?.message || 'Нууц үг үүсгэхэд алдаа гарлаа.';
 };
 
 /**
@@ -58,6 +82,7 @@ export default function BookingDetails({
         refreshAvailability,
     } = useBookingStore();
     const layout = useBookingLayout();
+    const { token: userToken, isAuthenticated, role } = useAuthStore();
     // Desktop дээр рэйлийн 380px панель биш — 960px төвлөрсөн цонх (2 багана багтаана).
     const mode = layout === 'desktop' ? 'wide' : layout === 'tablet' ? 'dialog' : 'sheet';
 
@@ -80,6 +105,13 @@ export default function BookingDetails({
     const [isRegistrationPromptOpen, setIsRegistrationPromptOpen] = useState(false);
     const [isIdentityMethodPromptOpen, setIsIdentityMethodPromptOpen] = useState(false);
     const [isEmailOtpPromptOpen, setIsEmailOtpPromptOpen] = useState(false);
+    const [isPasswordSetupPromptOpen, setIsPasswordSetupPromptOpen] = useState(false);
+    const [passwordSetup, setPasswordSetup] = useState(null);
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordSetupError, setPasswordSetupError] = useState('');
+    const [isSettingPassword, setIsSettingPassword] = useState(false);
+    const [allowAccountInfo, setAllowAccountInfo] = useState(true);
 
     // Admin горимд products prop-оор API-гийн үйлчилгээ ирнэ. Mock (non-admin) урсгалд
     // productId байхгүй тул захиалга илгээгдэхгүй — зөвхөн демо жагсаалт харагдана.
@@ -90,12 +122,16 @@ export default function BookingDetails({
     // Салбар сонгох нь ЗААВАЛ биш — clinicNum тодорхойгүй бол payload-аас гарч,
     // сервер эмчийн салбарыг өөрөө нөхнө.
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientInfo.email || '');
-    const isEmailAcceptable = !patientInfo.email || isEmailValid;
+
+    const hasUserAccount = isAuthenticated && String(role || '').toLowerCase() === 'user' && Boolean(userToken);
+    const canUseAccountInfo = allowAccountInfo && hasUserAccount;
     const canSubmit = Boolean(
-        patientInfo.firstName &&
-        patientInfo.lastName &&
-        isPhoneValid &&
-        isEmailAcceptable &&
+        (canUseAccountInfo || (
+            patientInfo.firstName &&
+            patientInfo.lastName &&
+            isPhoneValid &&
+            isEmailValid
+        )) &&
         selectedService?.productId != null &&
         selectedTimeSlot?.rawSlot
     );
@@ -145,6 +181,13 @@ export default function BookingDetails({
         setIsRegistrationPromptOpen(false);
         setIsIdentityMethodPromptOpen(false);
         setIsEmailOtpPromptOpen(false);
+        setIsPasswordSetupPromptOpen(false);
+        setPasswordSetup(null);
+        setPassword('');
+        setConfirmPassword('');
+        setPasswordSetupError('');
+        setIsSettingPassword(false);
+        setAllowAccountInfo(true);
         setTimeout(() => {
             resetBooking();
         }, 500);
@@ -170,6 +213,9 @@ export default function BookingDetails({
                 timeSlot: selectedTimeSlot,
                 service: selectedService,
                 patientInfo,
+                useAccountInfo: canUseAccountInfo,
+                saveAccountInfo: hasUserAccount && !allowAccountInfo,
+                accessToken: hasUserAccount ? userToken : undefined,
             });
 
             if (!response?.bookingId || !response?.bookingToken) {
@@ -194,6 +240,14 @@ export default function BookingDetails({
             } else if (error.status === 404) {
                 setSubmitError('Эмч/салбар олдсонгүй. Жагсаалтыг шинэчилж байна.');
                 onReloadLists?.();
+                setStep(2);
+            }
+            if (error.code === 'ACCOUNT_INFO_INCOMPLETE') {
+                setAllowAccountInfo(false);
+                setSubmitError('Your account personal information is incomplete. Please enter it once below.');
+                setIsRegistrationPromptOpen(false);
+                setIsIdentityMethodPromptOpen(false);
+                setIsEmailOtpPromptOpen(false);
                 setStep(2);
             }
             throw error;
@@ -242,7 +296,7 @@ export default function BookingDetails({
     const handleSelectEmailIdentity = async () => {
         if (isSubmitting || isSendingOtp) return;
 
-        if (!isEmailValid) {
+        if (!canUseAccountInfo && !isEmailValid) {
             setIdentityError('Gmail-ээр код авахын тулд хувийн мэдээлэл хэсэгт зөв имэйл хаяг оруулна уу.');
             return;
         }
@@ -307,7 +361,30 @@ export default function BookingDetails({
                 code,
             });
 
-            useAuthStore.getState().loginWithToken(response?.token, patientInfo);
+            if (response?.requiresPasswordSetup) {
+                if (!response?.passwordSetupToken) {
+                    throw new Error('Нууц үг үүсгэх мэдээлэл олдсонгүй. Кодыг дахин илгээнэ үү.');
+                }
+
+                setPasswordSetup({
+                    token: response.passwordSetupToken,
+                    expiresAt: response.expiresAt || '',
+                    verifiedIdentity: otpDestination || patientInfo.email || '',
+                });
+                setPassword('');
+                setConfirmPassword('');
+                setPasswordSetupError('');
+                setIsEmailOtpPromptOpen(false);
+                setIsPasswordSetupPromptOpen(true);
+                setStep(2);
+                return;
+            }
+
+            if (!response?.token) {
+                throw new Error('Баталгаажуулалтын хариу дутуу байна. Кодыг дахин илгээнэ үү.');
+            }
+
+            useAuthStore.getState().loginWithToken(response.token, patientInfo);
             setConfirmation({
                 ...bookingSession.draft,
                 ...response,
@@ -324,6 +401,73 @@ export default function BookingDetails({
         }
     };
 
+    const handlePasswordSetupSubmit = async (event) => {
+        event.preventDefault();
+
+        if (isSettingPassword) return;
+
+        if (!password || !confirmPassword) {
+            setPasswordSetupError('Нууц үгээ хоёр талбарт оруулна уу.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setPasswordSetupError('Нууц үг давталттайгаа тохирохгүй байна.');
+            return;
+        }
+
+        if (!bookingSession || !passwordSetup?.token) {
+            setPasswordSetupError('Нууц үг үүсгэх хугацаа дууссан байна. Кодыг дахин илгээнэ үү.');
+            return;
+        }
+
+        setIsSettingPassword(true);
+        setPasswordSetupError('');
+
+        try {
+            const response = await setupBookingPassword({
+                clinicId: selectedClinic?.id,
+                bookingId: bookingSession.bookingId,
+                bookingToken: bookingSession.bookingToken,
+                passwordSetupToken: passwordSetup.token,
+                password,
+                confirmPassword,
+            });
+
+            if (!response?.token) {
+                throw new Error('Нууц үг үүсгэсэн хариу дутуу байна. Дахин оролдоно уу.');
+            }
+
+            useAuthStore.getState().loginWithToken(response.token, patientInfo);
+            setConfirmation({
+                ...bookingSession.draft,
+                ...response,
+                bookingId: bookingSession.bookingId,
+            });
+            setCanViewBookings(true);
+            refreshAvailability();
+            setPassword('');
+            setConfirmPassword('');
+            setPasswordSetup(null);
+            setIsPasswordSetupPromptOpen(false);
+            setStep(6);
+        } catch (error) {
+            setPasswordSetupError(getPasswordSetupErrorMessage(error));
+        } finally {
+            setIsSettingPassword(false);
+        }
+    };
+
+    const handleBackFromPasswordSetup = () => {
+        setPassword('');
+        setConfirmPassword('');
+        setPasswordSetupError('');
+        setPasswordSetup(null);
+        setIsPasswordSetupPromptOpen(false);
+        setIsIdentityMethodPromptOpen(true);
+        setStep(2);
+    };
+
     const handleOtpChange = (value) => {
         const nextCode = value.replace(/\D/g, '').slice(0, 4);
         setOtpCode(nextCode);
@@ -334,10 +478,47 @@ export default function BookingDetails({
         }
     };
 
+    const startAccountInfoBooking = async () => {
+        try {
+            const session = await createBookingSession();
+
+            // Login хийсэн User-г BE аль хэдийн баталгаажсан гэж буцаавал
+            // registration consent болон Gmail OTP-г алгасаад confirmation харуулна.
+            if (session.draft?.requiresIdentityVerification === false) {
+                setConfirmation({
+                    ...session.draft,
+                    bookingId: session.bookingId,
+                });
+                setCanViewBookings(true);
+                refreshAvailability();
+                setStep(6);
+                return;
+            }
+
+            setIdentityError('');
+            setIsRegistrationPromptOpen(true);
+        } catch (error) {
+            if (error?.code === 'ACCOUNT_INFO_INCOMPLETE') return;
+
+            setSubmitError(error?.message || 'Захиалга үүсгэхэд алдаа гарлаа.');
+            setStep(2);
+        }
+    };
+
     const handleContinue = () => {
         if (step === 1 && selectedService) {
+            if (canUseAccountInfo) {
+                void startAccountInfoBooking();
+                return;
+            }
+
             setStep(2);
         } else if (step === 2 && canSubmit) {
+            if (hasUserAccount && !allowAccountInfo) {
+                void startAccountInfoBooking();
+                return;
+            }
+
             setSubmitError('');
             setNeedsNewTimeSlot(false);
             setIdentityError('');
@@ -356,7 +537,7 @@ export default function BookingDetails({
     };
 
     const isPrimaryDisabled = step === 1
-        ? !selectedService
+        ? (!selectedService || isSubmitting)
         : (!canSubmit || isSubmitting);
 
     // Бүх breakpoint дээр overlay тул хаах/нээхийг ResponsiveSheet өөрөө
@@ -367,7 +548,7 @@ export default function BookingDetails({
             open={isBookingDetailsOpen}
             onClose={handleBack}
             // Илгээж байх үед болон баталгаажилтын дэлгэц дээр санамсаргүй хаалтаас хамгаална
-            dismissible={!isRegistrationPromptOpen && !isIdentityMethodPromptOpen && !isEmailOtpPromptOpen && step < 3 && !isSubmitting && !isVerifyingOtp}
+            dismissible={!isRegistrationPromptOpen && !isIdentityMethodPromptOpen && !isEmailOtpPromptOpen && !isPasswordSetupPromptOpen && step < 3 && !isSubmitting && !isVerifyingOtp && !isSettingPassword}
             label="Захиалгын дэлгэрэнгүй"
         >
             <BookingDetailsPanel
@@ -383,6 +564,7 @@ export default function BookingDetails({
                 selectedClinic={selectedClinic}
                 handleServiceSelect={handleServiceSelect}
                 patientInfo={patientInfo}
+                showPersonalInfoForm={!canUseAccountInfo}
                 handleInputChange={handleInputChange}
                 isPhoneValid={isPhoneValid}
                 isEmailValid={isEmailValid}
@@ -406,10 +588,20 @@ export default function BookingDetails({
                 isIdentityMethodPromptOpen={isIdentityMethodPromptOpen}
                 isIdentityMethodPromptBusy={isSubmitting || isSendingOtp}
                 isEmailOtpPromptOpen={isEmailOtpPromptOpen}
+                isPasswordSetupPromptOpen={isPasswordSetupPromptOpen}
+                passwordSetupIdentity={passwordSetup?.verifiedIdentity || ''}
+                password={password}
+                confirmPassword={confirmPassword}
+                passwordSetupError={passwordSetupError}
+                isSettingPassword={isSettingPassword}
                 onAcceptRegistration={handleAcceptRegistration}
                 onDeclineRegistration={handleDeclineRegistration}
                 onSelectEmailIdentity={handleSelectEmailIdentity}
                 onBackToIdentityMethod={handleBackToIdentityMethod}
+                onPasswordChange={setPassword}
+                onConfirmPasswordChange={setConfirmPassword}
+                onPasswordSetupSubmit={handlePasswordSetupSubmit}
+                onBackFromPasswordSetup={handleBackFromPasswordSetup}
                 canViewBookings={canViewBookings}
                 onBack={handleBack}
                 onContinue={handleContinue}

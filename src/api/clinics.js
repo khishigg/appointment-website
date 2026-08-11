@@ -2,13 +2,35 @@ import { clearAppToken, getAppToken } from './appToken';
 
 export const clinicApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
-const getErrorMessage = async (response) => {
+const getErrorPayload = async (response) => {
     try {
-        const data = await response.json();
-        return data?.message || data?.error || data?.title;
+        return await response.json();
     } catch {
         return null;
     }
+};
+
+const getErrorMessage = (data) => {
+    const message = data?.message || data?.error || data?.title;
+    if (message) return message;
+
+    const errors = data?.errors;
+    if (Array.isArray(errors)) {
+        const messages = errors
+            .map((item) => item?.description || item?.message || (typeof item === 'string' ? item : ''))
+            .filter(Boolean);
+        return messages.length ? messages.join(' ') : null;
+    }
+
+    if (errors && typeof errors === 'object') {
+        const messages = Object.values(errors)
+            .flatMap((item) => Array.isArray(item) ? item : [item])
+            .map((item) => typeof item === 'string' ? item : item?.description || item?.message || '')
+            .filter(Boolean);
+        return messages.length ? messages.join(' ') : null;
+    }
+
+    return null;
 };
 
 const getStatusMessage = (status) => {
@@ -77,6 +99,7 @@ export async function clinicRequest(
         method = 'GET',
         body,
         preferServerMessage = false,
+        accessToken,
     } = {}
 ) {
     const sendRequest = async (token) =>
@@ -94,10 +117,12 @@ export async function clinicRequest(
     let response;
 
     try {
-        response = await sendRequest(await getAppToken());
+        response = await sendRequest(accessToken || await getAppToken());
 
-        // Refresh once when the cached application token has expired or been revoked.
-        if (response.status === 401) {
+        // A User JWT belongs to the signed-in guest and must never trigger an
+        // AppointmentApp-token refresh. The normal public clinic calls retain
+        // their one-time application-token refresh.
+        if (!accessToken && response.status === 401) {
             clearAppToken();
             response = await sendRequest(await getAppToken());
         }
@@ -107,7 +132,8 @@ export async function clinicRequest(
     }
 
     if (!response.ok) {
-        const message = await getErrorMessage(response);
+        const data = await getErrorPayload(response);
+        const message = getErrorMessage(data);
         // Захиалга үүсгэх зэрэг дуудлагад сервер яг ямар шалтгаанаар татгалзсаныг
         // ({ message }) шууд харуулах нь чухал тул статусын ерөнхий текстээс дээгүүр тавина.
         const error = new Error(
@@ -117,6 +143,8 @@ export async function clinicRequest(
             `Мэдээлэл авахад алдаа гарлаа (${response.status}).`
         );
         error.status = response.status;
+        error.code = data?.code;
+        error.errors = data?.errors;
 
         // A second 401 has already refreshed the AppToken once. Do not log out
         // the current user because their session is unrelated to this token.
@@ -158,12 +186,13 @@ export const getClinicProducts = (clinicId, options) =>
 
 // Захиалга үүсгэх. payload-ыг дуудагч тал (buildAppointmentPayload) угсарна —
 // clinicNum байхгүй үед тэр талбар payload-д ОГТ орохгүй.
-export const createAppointment = (clinicId, payload, { signal } = {}) =>
+export const createAppointment = (clinicId, payload, { signal, accessToken } = {}) =>
     clinicRequest(`/api/clinics/${encodeURIComponent(clinicId)}/appointments`, {
         method: 'POST',
         body: payload,
         preferServerMessage: true,
         signal,
+        accessToken,
     });
 
 const buildAvailabilityQuery = ({ clinicNum, startDate, endDate, slotDuration = 30 }) => {

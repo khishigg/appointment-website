@@ -169,7 +169,7 @@ export const normalizeProduct = (product = {}) => {
 
 // POST /api/clinics/{clinicId}/appointments-ийн body-г FE state-ээс угсарна.
 // aptDateTime нь availability-ийн rawSlot мөр — ЯГ ТЭР ХЭВЭЭР нь илгээнэ.
-export const buildAppointmentPayload = ({ doctor, branch, timeSlot, service, patientInfo } = {}) => {
+export const buildAppointmentPayload = ({ doctor, branch, timeSlot, service, patientInfo, useAccountInfo = false, saveAccountInfo = false } = {}) => {
     const provNum = resolveDoctorProvNum(doctor);
     const operatoryNum = timeSlot?.operatoryNum ?? null;
     const aptDateTime = timeSlot?.rawSlot ?? null;
@@ -196,14 +196,22 @@ export const buildAppointmentPayload = ({ doctor, branch, timeSlot, service, pat
         operatoryNum: Number(operatoryNum),
         aptDateTime,
         productId: Number(productId),
-        firstName: (patientInfo?.firstName ?? '').trim(),
-        lastName: (patientInfo?.lastName ?? '').trim(),
-        phoneNumber: (patientInfo?.phone ?? '').trim(),
+        useAccountInfo: Boolean(useAccountInfo),
     };
 
-    const email = (patientInfo?.email ?? '').trim();
-    if (email) {
-        payload.email = email;
+    if (!useAccountInfo) {
+        payload.firstName = (patientInfo?.firstName ?? '').trim();
+        payload.lastName = (patientInfo?.lastName ?? '').trim();
+        payload.phoneNumber = (patientInfo?.phone ?? '').trim();
+
+        const email = (patientInfo?.email ?? '').trim();
+        if (email) {
+            payload.email = email;
+        }
+
+        if (saveAccountInfo) {
+            payload.saveAccountInfo = true;
+        }
     }
 
     // Салбар тодорхойгүй бол талбарыг ОГТ илгээхгүй — сервер эмчийн салбарыг өөрөө нөхнө.
@@ -222,14 +230,17 @@ export async function bookAppointment({
     timeSlot,
     service,
     patientInfo,
+    useAccountInfo = false,
+    saveAccountInfo = false,
+    accessToken,
     signal,
 } = {}) {
     if (clinicId === null || clinicId === undefined || clinicId === '') {
         throw new Error('Эмнэлэг сонгогдоогүй байна.');
     }
 
-    const payload = buildAppointmentPayload({ doctor, branch, timeSlot, service, patientInfo });
-    return createAppointment(clinicId, payload, { signal });
+    const payload = buildAppointmentPayload({ doctor, branch, timeSlot, service, patientInfo, useAccountInfo, saveAccountInfo });
+    return createAppointment(clinicId, payload, { signal, accessToken });
 }
 
 export async function getDoctorFreeTimeSlots({
