@@ -125,7 +125,9 @@ export default function BookingDetails({
 
     const hasUserAccount = isAuthenticated && String(role || '').toLowerCase() === 'user' && Boolean(userToken);
     const canUseAccountInfo = allowAccountInfo && hasUserAccount;
+    const isClinicBookingEnabled = selectedClinic?.bookingEnabled !== false;
     const canSubmit = Boolean(
+        isClinicBookingEnabled &&
         (canUseAccountInfo || (
             patientInfo.firstName &&
             patientInfo.lastName &&
@@ -201,6 +203,12 @@ export default function BookingDetails({
     const createBookingSession = async () => {
         if (bookingSession) return bookingSession;
 
+        if (!isClinicBookingEnabled) {
+            const error = new Error('Энэ эмнэлэг одоогоор онлайн цаг захиалга авахгүй байна.');
+            error.code = 'BOOKING_DISABLED';
+            throw error;
+        }
+
         setIsSubmitting(true);
         setSubmitError('');
         setNeedsNewTimeSlot(false);
@@ -232,14 +240,20 @@ export default function BookingDetails({
             return session;
         } catch (error) {
             if (error.status === 409) {
+                if (error.code !== 'SLOT_UNAVAILABLE') {
+                    setSubmitError(error.message || 'Захиалга үүсгэх боломжгүй байна.');
+                    setStep(2);
+                } else {
                 setSubmitError('Энэ цаг дөнгөж сая захиалагдлаа. Өөр цаг сонгоно уу.');
                 setNeedsNewTimeSlot(true);
                 selectTimeSlot(null);
                 refreshAvailability();
                 setStep(2);
+                }
             } else if (error.status === 404) {
                 setSubmitError('Эмч/салбар олдсонгүй. Жагсаалтыг шинэчилж байна.');
                 onReloadLists?.();
+                setSubmitError(error.message || 'Эмнэлэг, салбар эсвэл эмч олдсонгүй.');
                 setStep(2);
             }
             if (error.code === 'ACCOUNT_INFO_INCOMPLETE') {

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import MyNavbar from "./components/MyNavbar";
 import Footer from "./components/Footer";
+import { useMapOverlayStore } from './store/MapOverlayStore';
 import Home from "./pages/Home";
 import BookingPage from "./pages/BookingPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -20,10 +21,11 @@ export default function App() {
 const AppShell = () => {
   const location = useLocation();
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
+  const isMapOverlayOpen = useMapOverlayStore((state) => state.isMapOverlayOpen);
 
   return (
     <>
-      {!isAuthPage && <MyNavbar />}
+      {!isAuthPage && !isMapOverlayOpen && <MyNavbar />}
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />

@@ -28,6 +28,7 @@ import {
 import { normalizeProduct } from '../api/appointments';
 import { useBookingStore } from '../store/BookingStore';
 import SearchBar from '../components/SearchBar';
+import { getCoordinatePair } from '../components/map/locationData';
 
 const asList = (value) => {
     if (Array.isArray(value)) return value;
@@ -46,6 +47,8 @@ const normalizeClinicDetail = (clinic, fallbackId) => ({
     email: clinic.email ?? clinic.Email ?? '',
     socialAddressUrl: clinic.socialAddressUrl ?? clinic.SocialAddressUrl ?? '',
     workingHours: clinic.workingHoursJson ?? clinic.WorkingHoursJson ?? '',
+    position: getCoordinatePair(clinic),
+    bookingEnabled: clinic.bookingEnabled ?? clinic.BookingEnabled ?? true,
 });
 
 // Хаягийн хэсгүүдийг давхардуулахгүйгээр нэгтгэнэ.
@@ -223,7 +226,7 @@ export default function BookingPage() {
             return undefined;
         }
 
-        setSelectedClinic({ id: clinicId, name: '' });
+        setSelectedClinic({ id: clinicId, name: '', bookingEnabled: false });
         const controller = new AbortController();
         setIsLoadingTenant(true);
         setIsLoadingBranches(true);
@@ -235,10 +238,7 @@ export default function BookingPage() {
                 if (requestId !== tenantRequestId.current) return;
                 const normalizedClinic = normalizeClinicDetail(tenantData, clinicId);
                 setTenant(normalizedClinic);
-                setSelectedClinic({
-                    id: normalizedClinic.id,
-                    name: normalizedClinic.name,
-                });
+                setSelectedClinic(normalizedClinic);
             })
             .catch((error) => {
                 if (
@@ -316,11 +316,11 @@ export default function BookingPage() {
     const clinic = tenant;
 
     const handleBookBranch = useCallback((branch) => {
-        if (!branch) return;
+        if (!branch || !clinic?.bookingEnabled) return;
 
         selectBranch(branch);
         setActiveClinicTab('doctor');
-    }, [selectBranch]);
+    }, [clinic?.bookingEnabled, selectBranch]);
 
     // Таб бүрийн агуулгыг хоёр бүсэд хуваана:
     //   top    — бүтэн өргөн (салбар/үйлчилгээ/хаяг)
@@ -391,7 +391,12 @@ export default function BookingPage() {
     };
 
 
-    const showBookingContent = Boolean(clinicId && clinic && !isLoadingTenant);
+    const showBookingContent = Boolean(
+        clinicId && clinic && clinic.bookingEnabled && !isLoadingTenant
+    );
+    const isBookingUnavailable = Boolean(
+        clinicId && clinic && !clinic.bookingEnabled && !isLoadingTenant
+    );
 
     // Захиалгын рэйл нь ЗӨВХӨН эмчийн жагсаалт дэлгэц дээр байхад утгатай.
     // API-driven 'salbar' таб нь BranchSelector + DoctorSelector хоёуланг рендэрлэдэг.
@@ -433,6 +438,12 @@ export default function BookingPage() {
                 />
             ) : null}
 
+            {isBookingUnavailable ? (
+                <div className="tenant-detail-state" role="status">
+                    Энэ эмнэлэг одоогоор онлайн цаг захиалга авахгүй байна.
+                </div>
+            ) : null}
+
             {showBookingContent ? (
                 <BookingWorkspace
                     hasRail={showRail}
@@ -447,13 +458,17 @@ export default function BookingPage() {
                 mount хэвээр рендэрлэгдэнэ (хаалттай үедээ өөрсдөө null буцаана).
                 Нөхцөлтэйгээр рендэрлэвэл 409 алдааны дараа `step` болон формын
                 өгөгдөл алдагдана. */}
-            <TimeSlotModal />
-            <BookingDetails
-                products={products}
-                isLoadingProducts={isLoadingProducts}
-                productError={productError}
-                onReloadLists={reloadLists}
-            />
+            {clinic?.bookingEnabled ? (
+                <>
+                    <TimeSlotModal />
+                    <BookingDetails
+                        products={products}
+                        isLoadingProducts={isLoadingProducts}
+                        productError={productError}
+                        onReloadLists={reloadLists}
+                    />
+                </>
+            ) : null}
         </div>
     );
 }

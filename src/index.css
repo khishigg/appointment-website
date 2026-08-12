@@ -1045,6 +1045,12 @@ h5 {
   background-color: var(--gray-50);
 }
 
+.hospital-list-item:disabled,
+.search-popular-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .hospital-item-logo-box {
   width: 48px;
   height: 48px;
@@ -3051,26 +3057,33 @@ h5 {
 }
 
 .hospital-details-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  padding: 24px;
+  background: var(--color-surface);
+  padding: 0.75rem 1.25rem max(2rem, calc(2rem + env(safe-area-inset-bottom)));
   width: 100%;
   max-width: 100%;
-  border-radius: 32px 32px 0 0;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  box-shadow: var(--shadow-modal);
   pointer-events: auto;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0;
+  border-top: 1px solid var(--color-line-soft);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  transition: all 0.3s ease;
+}
+
+.hospital-sheet-handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  margin-inline: auto;
+  border-radius: var(--radius-pill);
+  background: var(--color-line);
 }
 
 .hospital-details-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
 .hospital-header-content {
@@ -3079,9 +3092,9 @@ h5 {
 }
 
 .hospital-type-badge {
-  color: #007AFF;
-  font-size: 11px;
-  font-weight: 700;
+  color: var(--color-info-text);
+  font-size: var(--text-label);
+  font-weight: var(--text-label--font-weight);
   text-transform: uppercase;
   letter-spacing: 1.5px;
   margin-bottom: 6px;
@@ -3089,24 +3102,36 @@ h5 {
 }
 
 .hospital-name-title {
-  font-size: 22px;
-  font-weight: 800;
-  color: #1a1a1a;
-  line-height: 1.2;
+  font-size: var(--text-title);
+  font-weight: var(--text-title--font-weight);
+  color: var(--color-heading);
+  line-height: var(--text-title--line-height);
 }
 
 .hospital-logo-container {
   width: 56px;
   height: 56px;
-  background: #f8f9fa;
-  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-info-surface);
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-xs);
   flex-shrink: 0;
+}
+
+.hospital-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hospital-logo-fallback {
+  color: var(--color-info-text);
+  font-size: var(--text-title);
+  font-weight: var(--text-title--font-weight);
 }
 
 .hospital-meta-row {
@@ -3162,7 +3187,8 @@ h5 {
 .hospital-info-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  margin-top: 1.25rem;
 }
 
 .hospital-info-item {
@@ -3172,49 +3198,58 @@ h5 {
 }
 
 .hospital-info-icon {
-  color: #8e8e93;
+  color: var(--color-faint);
   margin-top: 2px;
   flex-shrink: 0;
 }
 
 .hospital-info-text {
-  font-size: 14px;
-  color: #3a3a3c;
-  font-weight: 500;
-  line-height: 1.4;
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  font-weight: 400;
+  line-height: var(--text-body--line-height);
 }
 
 .hospital-info-phone {
-  font-weight: 700;
-  color: #1c1c1e;
+  font-weight: 600;
+  color: var(--color-heading);
 }
 
 .hospital-actions-bar {
   display: flex;
-  gap: 12px;
-  margin-top: 8px;
+  margin-top: 1.25rem;
 }
 
 .hospital-btn-book {
-  flex: 2;
-  background: #007AFF;
-  color: white;
-  padding: 14px;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 15px;
+  width: 100%;
+  min-height: 3rem;
+  background: var(--color-info);
+  color: var(--color-primary-text);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-control);
+  font-size: var(--text-body);
+  font-weight: 600;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--duration-base) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.hospital-btn-book:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.hospital-btn-book:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
 }
 
 .hospital-btn-book:active {
   transform: scale(0.96);
-  background: #0063cc;
 }
 
 .hospital-btn-nav {
@@ -3243,7 +3278,8 @@ h5 {
   .hospital-details-card {
     max-width: 420px;
     margin-bottom: 24px;
-    border-radius: 28px;
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-card);
     margin-inline: 24px;
   }
 }
@@ -3356,6 +3392,8 @@ h5 {
 }
 
 .search-popular-card {
+  width: 100%;
+  text-align: left;
   background: rgba(255, 255, 255, 0.6);
   padding: 16px;
   border-radius: 20px;
@@ -3516,4 +3554,172 @@ h5 {
 .booking-data-empty {
   width: 100%;
   min-height: 120px;
+}
+
+/* Leaflet map discovery controls and always-visible clinic names. */
+.map-discovery-topbar {
+  position: absolute;
+  inset: 1.25rem 1rem auto;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  isolation: isolate;
+}
+
+.map-discovery-close {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.map-discovery-search {
+  min-height: 44px;
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  padding: 0.6875rem 0.875rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.map-discovery-search input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-heading);
+  font-size: var(--text-body);
+  font-weight: 500;
+  outline: none;
+}
+
+.map-discovery-search input::placeholder {
+  color: var(--color-faint);
+}
+
+.map-discovery-close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--color-heading);
+}
+
+.map-discovery-close button {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.clinic-map-marker-label {
+  margin: 0 !important;
+  border: 1px solid var(--color-line) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--color-surface) !important;
+  box-shadow: var(--shadow-overlay) !important;
+  color: var(--color-heading) !important;
+  font-family: inherit !important;
+  font-size: var(--text-caption) !important;
+  font-weight: 700 !important;
+  line-height: var(--text-caption--line-height) !important;
+  padding: 0.375rem 0.5rem !important;
+  white-space: nowrap;
+}
+
+.clinic-map-marker-label::before {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .map-discovery-topbar {
+    inset: 1rem 0.75rem auto;
+    gap: 0.5rem;
+  }
+
+}
+
+.search-popular-card:disabled:hover {
+  background: rgba(255, 255, 255, 0.6);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Shared OpenStreetMap / Leaflet clinic map. */
+.clinic-map {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid var(--color-line-soft, #e2e8f0);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.clinic-map__canvas {
+  width: 100%;
+  height: 320px;
+}
+
+.clinic-map__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(248 250 252 / 92%);
+  color: #64748b;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.clinic-map-popup p {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.clinic-map--discovery,
+.clinic-map--discovery .clinic-map__canvas {
+  min-height: 0;
+  height: 100%;
+}
+
+.clinic-map--discovery {
+  border: 0;
+  border-radius: 0;
+}
+
+/* Permanent clinic labels are Leaflet tooltips in a separate pane. Keep labels
+   out of the Map discovery search safe area without hiding labels elsewhere. */
+.clinic-map--discovery .leaflet-tooltip-pane {
+  clip-path: inset(5.5rem 0 0);
+}
+
+@media (max-width: 767px) {
+  .clinic-map,
+  .clinic-map__canvas {
+    min-height: 280px;
+    height: 280px;
+  }
+
+  .clinic-map--discovery,
+  .clinic-map--discovery .clinic-map__canvas {
+    min-height: 0;
+    height: 100%;
+  }
 }

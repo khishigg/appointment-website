@@ -44,7 +44,16 @@ export const getCoordinatePair = (value) => {
         )
     );
 
-    if (lat === null || lng === null) return null;
+    if (
+        lat === null ||
+        lng === null ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+    ) {
+        return null;
+    }
 
     return { lat, lng };
 };

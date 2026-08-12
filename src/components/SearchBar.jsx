@@ -1,22 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { FaMapMarkerAlt, FaLocationArrow } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiX, FiFilter, FiMapPin } from "react-icons/fi";
-import { motion, AnimatePresence } from "framer-motion";
+import { FiSearch, FiX, FiFilter } from "react-icons/fi";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import Input from "./ui/Input";
 import MapDiscoveryModal from "./MapDiscoveryModal";
 import { createPortal } from "react-dom";
 import { getClinics, resolveClinicAssetUrl } from "../api/clinics";
+import { getCoordinatePair } from './map/locationData';
+import { useMapOverlayStore } from '../store/MapOverlayStore';
 
 const ALL_AIMAGS = "Бүх аймаг";
 
 
 const normalizeTenant = (tenant) => {
+  const position = getCoordinatePair(tenant);
   const name = tenant.name ?? tenant.Name ?? "Нэргүй эмнэлэг";
   const logo = tenant.logo ?? tenant.Logo ?? "";
 
   return {
     id: tenant.id ?? tenant.Id,
+    phone: tenant.phoneNumber ?? tenant.PhoneNumber ?? tenant.phone ?? tenant.Phone ?? "",
+    position,
+    bookingEnabled: tenant.bookingEnabled ?? tenant.BookingEnabled ?? true,
     name,
     logoUrl: resolveClinicAssetUrl(logo),
     logoInitial: name.trim().charAt(0).toUpperCase() || "Э",
@@ -60,6 +65,8 @@ const matchesFilter = (item, filterType, selectedAimag) => {
 const getItemMeta = (item) => item.address || "";
 
 const openHospital = ({ navigate, item, onClose, setQuery }) => {
+  if (!item.bookingEnabled) return;
+
   setQuery("");
   // clinicId-г ҮРГЭЛЖ дамжуулна — өмнө нь зочин үед дамждаггүй тул BookingPage
   // юу ч ачаалахгүй хоосон нээгддэг байв.
@@ -165,7 +172,7 @@ const MobileSearchOverlay = ({
   };
 
   return createPortal(
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -203,7 +210,7 @@ const MobileSearchOverlay = ({
         {/* Aimag Dropdown Overlay */}
         <AnimatePresence>
           {provinces.length > 0 && showAimagDropdown && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -234,7 +241,7 @@ const MobileSearchOverlay = ({
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -258,7 +265,7 @@ const MobileSearchOverlay = ({
         </div>
       )}
 
-      <motion.div
+      <Motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -283,6 +290,7 @@ const MobileSearchOverlay = ({
                   openHospital({ navigate, item, onClose, setQuery });
                 }}
                 className="hospital-list-item"
+                disabled={!item.bookingEnabled}
               >
                 <div className="hospital-item-logo-box">
                   <ClinicLogo item={item} />
@@ -297,6 +305,9 @@ const MobileSearchOverlay = ({
                       {getItemMeta(item)}
                     </div>
                   ) : null}
+                  {!item.bookingEnabled ? (
+                    <div className="hospital-item-meta">Онлайн цаг авахгүй</div>
+                  ) : null}
                 </div>
               </button>
             ))}
@@ -304,8 +315,8 @@ const MobileSearchOverlay = ({
             <div className="tenant-search-state">Эмнэлэг олдсонгүй.</div>
           )}
         </div>
-      </motion.div>
-    </motion.div>,
+      </Motion.div>
+    </Motion.div>,
     document.body
   );
 };
@@ -353,7 +364,7 @@ const PremiumSearchOverlay = ({
 
   return createPortal(
     <div className="search-premium-overlay" onClick={onClose}>
-      <motion.div
+      <Motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -383,7 +394,7 @@ const PremiumSearchOverlay = ({
         <div className="search-premium-content no-scrollbar">
           {/* 📍 Location Filter Chips (Desktop Version) */}
           {showFilters && (
-            <motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
+            <Motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
               {[
                 { id: 'all', label: 'Бүгд' },
                 { id: 'city', label: 'Улаанбаатар' },
@@ -401,7 +412,7 @@ const PremiumSearchOverlay = ({
                   {chip.label}
                 </button>
               ))}
-            </motion.div>
+            </Motion.div>
           )}
           {/* 
           <motion.div variants={itemVariants} className="search-section-title">
@@ -417,8 +428,10 @@ const PremiumSearchOverlay = ({
           {!isLoading && !error && filteredItems.length > 0 ? (
             <div className="search-popular-grid">
               {filteredItems.slice(0, 10).map((item) => (
-                <motion.div
+                <Motion.button
                   key={item.id}
+                  type="button"
+                  disabled={!item.bookingEnabled}
                   variants={itemVariants}
                   onClick={() => {
                     openHospital({ navigate, item, onClose, setQuery });
@@ -434,7 +447,10 @@ const PremiumSearchOverlay = ({
                       <div className="search-popular-type">{getItemMeta(item)}</div>
                     ) : null}
                   </div>
-                </motion.div>
+                  {!item.bookingEnabled ? (
+                    <span className="search-popular-type">Онлайн цаг авахгүй</span>
+                  ) : null}
+                </Motion.button>
               ))}
             </div>
           ) : !isLoading && !error ? (
@@ -443,15 +459,15 @@ const PremiumSearchOverlay = ({
             </div>
           ) : null}
         </div>
-      </motion.div>
+      </Motion.div>
     </div>,
     document.body
   );
 };
 
 export default function SearchBar() {
+  const setMapOverlayOpen = useMapOverlayStore((state) => state.setMapOverlayOpen);
   const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
   const [showPremiumOverlay, setShowPremiumOverlay] = useState(false);
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -495,6 +511,16 @@ export default function SearchBar() {
 
   const searchItems = clinics;
   const retryTenants = () => setReloadKey((value) => value + 1);
+  const openMapModal = () => {
+    setMapOverlayOpen(true);
+    setShowMapModal(true);
+  };
+  const closeMapModal = () => {
+    setShowMapModal(false);
+    setMapOverlayOpen(false);
+  };
+
+  useEffect(() => () => setMapOverlayOpen(false), [setMapOverlayOpen]);
 
   const handleSearch = () => {
     if (window.innerWidth < 768) {
@@ -536,10 +562,9 @@ export default function SearchBar() {
           <div className="location-section flex-grow-1 d-flex align-items-center">
             <div className="location-sub-island d-flex align-items-center w-100">
               <Input
-                placeholder="Google map ашиглах"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                onClick={() => setShowMapModal(true)}
+                placeholder="Газрын зургаар хайх"
+                value=""
+                onClick={openMapModal}
                 readOnly
                 className="location-inner-input border-0 shadow-none cursor-pointer hover:bg-gray-50 transition-colors"
                 containerClassName="mb-0 w-100"
@@ -589,7 +614,8 @@ export default function SearchBar() {
         {showMapModal && (
           <MapDiscoveryModal
             isOpen={showMapModal}
-            onClose={() => setShowMapModal(false)}
+            onClose={closeMapModal}
+            clinics={clinics}
           />
         )}
       </AnimatePresence>
