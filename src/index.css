@@ -3704,12 +3704,6 @@ h5 {
   border-radius: 0;
 }
 
-/* Permanent clinic labels are Leaflet tooltips in a separate pane. Keep labels
-   out of the Map discovery search safe area without hiding labels elsewhere. */
-.clinic-map--discovery .leaflet-tooltip-pane {
-  clip-path: inset(5.5rem 0 0);
-}
-
 @media (max-width: 767px) {
   .clinic-map,
   .clinic-map__canvas {

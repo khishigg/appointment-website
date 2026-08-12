@@ -23,15 +23,17 @@ export default function ClinicMarker({
                 click: () => onSelect?.(clinic),
             }}
         >
-            <Tooltip
-                permanent
-                direction="top"
-                offset={[0, -8]}
-                opacity={1}
-                className="clinic-map-marker-label"
-            >
-                {name}
-            </Tooltip>
+            {clinic.bookingEnabled ? (
+                <Tooltip
+                    permanent
+                    direction="top"
+                    offset={[0, -8]}
+                    opacity={1}
+                    className="clinic-map-marker-label"
+                >
+                    {name}
+                </Tooltip>
+            ) : null}
         </CircleMarker>
     );
 }
