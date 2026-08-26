@@ -48,3 +48,29 @@ export const declineBookingIdentity = ({ clinicId, bookingId, bookingToken, sign
         { bookingToken },
         { signal }
     );
+
+const qpayRequest = ({
+    clinicId,
+    bookingId,
+    bookingToken,
+    accessToken,
+    method,
+    signal,
+}) =>
+    clinicRequest(
+        `/api/clinics/${encodeURIComponent(clinicId)}/bookings/${encodeURIComponent(bookingId)}/qpay/${method === 'POST' ? 'invoice' : 'status'}`,
+        {
+            method,
+            preferServerMessage: true,
+            signal,
+            accessToken,
+            headers: bookingToken ? { 'X-Booking-Token': bookingToken } : {},
+            includeResponseMeta: true,
+        }
+    );
+
+export const createBookingQPayInvoice = (options) =>
+    qpayRequest({ ...options, method: 'POST' });
+
+export const getBookingQPayStatus = (options) =>
+    qpayRequest({ ...options, method: 'GET' });

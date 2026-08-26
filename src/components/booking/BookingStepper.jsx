@@ -10,7 +10,7 @@ import { FiCheck } from 'react-icons/fi';
 const STEPS = [
     { step: 1, label: 'Үйлчилгээ' },
     { step: 2, label: 'Мэдээлэл' },
-    { step: 3, label: 'Баталгаажуулалт' },
+    { step: 3, label: 'Төлбөр' },
     { step: 6, label: 'Баталгаа' },
 ];
 

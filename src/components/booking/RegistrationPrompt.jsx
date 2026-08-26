@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion as Motion } from 'framer-motion';
 
 /**
@@ -10,9 +11,37 @@ export default function RegistrationPrompt({
     error,
     onAccept,
     onDecline,
+    onDismiss,
+    isBackdropDismissible = false,
 }) {
+    const canDismiss = isBackdropDismissible && !isBusy;
+
+    useEffect(() => {
+        if (!canDismiss) return undefined;
+
+        const handleKeyDown = (event) => {
+            if (event.key !== 'Escape') return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            onDismiss?.();
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [canDismiss, onDismiss]);
+
+    const handleBackdropClick = (event) => {
+        if (event.target !== event.currentTarget || !canDismiss) return;
+
+        onDismiss?.();
+    };
+
     return (
-        <div className="absolute inset-0 z-50 flex items-end bg-black/35 backdrop-blur-[2px]">
+        <div
+            className="absolute inset-0 z-50 flex items-end bg-black/35 backdrop-blur-[2px]"
+            onClick={handleBackdropClick}
+        >
             <Motion.section
                 role="dialog"
                 aria-modal="true"
@@ -24,6 +53,7 @@ export default function RegistrationPrompt({
                 transition={{ type: 'spring', damping: 30, stiffness: 260 }}
                 className="w-full rounded-t-[30px] border-t border-line-soft bg-surface px-5 pb-8 pt-3 shadow-[0_-16px_40px_rgb(15_23_42_/_0.16)] sm:mx-auto sm:max-w-xl sm:rounded-t-[32px] sm:px-6"
                 style={{ paddingBottom: 'max(2rem, calc(2rem + env(safe-area-inset-bottom)))' }}
+                onClick={(event) => event.stopPropagation()}
             >
                 <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-pill bg-slate-200" />
 

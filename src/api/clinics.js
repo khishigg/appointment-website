@@ -11,7 +11,7 @@ const getErrorPayload = async (response) => {
 };
 
 const getErrorMessage = (data) => {
-    const message = data?.message || data?.error || data?.title;
+    const message = data?.message || data?.error || data?.title || data?.errorMessage;
     if (message) return message;
 
     const errors = data?.errors;
@@ -100,6 +100,8 @@ export async function clinicRequest(
         body,
         preferServerMessage = false,
         accessToken,
+        headers: customHeaders = {},
+        includeResponseMeta = false,
     } = {}
 ) {
     const sendRequest = async (token) =>
@@ -108,7 +110,9 @@ export async function clinicRequest(
             method,
             cache: 'no-store',
             headers: {
-                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+                ...customHeaders,
                 Authorization: `Bearer ${token}`,
             },
             ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -143,15 +147,28 @@ export async function clinicRequest(
             `Мэдээлэл авахад алдаа гарлаа (${response.status}).`
         );
         error.status = response.status;
-        error.code = data?.code;
+        error.code = data?.code ?? data?.errorCode;
         error.errors = data?.errors;
+        error.data = data;
 
         // A second 401 has already refreshed the AppToken once. Do not log out
         // the current user because their session is unrelated to this token.
         throw error;
     }
 
-    return response.json();
+    let data = null;
+
+    if (response.status !== 204) {
+        try {
+            data = await response.json();
+        } catch {
+            data = null;
+        }
+    }
+
+    return includeResponseMeta
+        ? { data, status: response.status }
+        : data;
 }
 
 export const getClinics = (options) =>

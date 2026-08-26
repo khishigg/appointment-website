@@ -978,6 +978,39 @@ h5 {
   color: var(--primary-600);
 }
 
+.search-clinic-type-filter {
+  display: flex;
+  padding: 0 24px 12px;
+}
+
+.search-clinic-type-filter--desktop {
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.search-clinic-type-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-availability);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+}
+
+.search-clinic-type-chip:hover {
+  background: var(--color-availability-hover);
+}
+
+.search-clinic-type-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .search-modal-chips-container {
   padding: 0 24px 12px;
   display: flex;
@@ -2025,231 +2058,316 @@ h5 {
   z-index: 1;
 }
 
-/* ==========================================================================
-   Partner Logos Redesign (Senior UI/UX)
-   ========================================================================== */
+/* ========================================================================== */
+/* Home — registered partner clinics                                          */
+/* ========================================================================== */
 .partner-logos-section {
-  background: var(--gray-25);
-  /* Softer background for premium contrast */
-}
-
-.text-overline {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  color: var(--gray-500);
-  text-transform: uppercase;
-}
-
-.marquee-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 1400px;
-  /* Constrain to ~70-80% of container */
-  margin: 0 auto;
+  padding: clamp(2.25rem, 4vw, 3.5rem) 0;
   overflow: hidden;
-  padding: 3rem 0;
-  touch-action: pan-y;
+  border-top: 1px solid var(--color-line-soft);
+  background: var(--warm-bg);
 }
 
-/* Premium Faded Edges - Wider for smoother transition */
-.marquee-fade-left,
-.marquee-fade-right {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 25%;
-  /* Increased for smoother fade */
-  z-index: 2;
-  pointer-events: none;
+.partner-logos-section__container {
+  display: grid;
+  gap: clamp(1.75rem, 3vw, 2.5rem);
 }
 
-.marquee-fade-left {
-  left: 0;
-  background: linear-gradient(to right, #ffffff 0%, transparent 100%);
-}
-
-.marquee-fade-right {
-  right: 0;
-  background: linear-gradient(to left, #ffffff 0%, transparent 100%);
-}
-
-.marquee-content {
+.partner-logos-header {
   display: flex;
-  gap: 1.5rem;
-  width: max-content;
-  animation: scroll-marquee 40s linear infinite;
+  max-width: 40rem;
+  margin: 0 auto;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
+.partner-logos-header h2 {
+  max-width: 40rem;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(1.75rem, 2.5vw, 2.625rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
 
-.logo-card {
-  flex: 0 0 auto;
-  width: clamp(140px, 15vw, 180px);
-  height: 90px;
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
-  display: flex;
+.partner-logos-header__description {
+  max-width: 40rem;
+  margin: clamp(0.75rem, 1.5vw, 1rem) 0 0;
+  color: var(--color-ink);
+  font-size: clamp(0.9375rem, 1.2vw, 1rem);
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+.partner-logos-header__action {
+  display: inline-flex;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 0.5rem;
+  margin-top: clamp(1.25rem, 2vw, 1.5rem);
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--primary-600);
+  border-radius: var(--radius-control);
+  background: var(--primary-500);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
 }
 
-.logo-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  border-color: #e2e8f0;
+.partner-logos-header__action svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  stroke-width: 2.25;
+}
+
+.partner-logos-header__action:hover {
+  background: var(--primary-600);
+  box-shadow: var(--shadow-card);
+  color: var(--color-ink);
+  transform: translateY(-1px);
+}
+
+.partner-logos-header__action:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.partner-logos-header__action:active {
+  transform: scale(0.98);
+}
+
+.partner-logo-rows {
+  display: grid;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.partner-logo-rows--desktop {
+  display: none;
+}
+
+.partner-logo-row {
+  --partner-logo-row-gap: 0.75rem;
+  width: 100%;
+  overflow: hidden;
+}
+
+.partner-logo-row__track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.partner-logo-row--left .partner-logo-row__track {
+  animation: partner-logo-scroll-left 28s linear infinite;
+}
+
+.partner-logo-row--right .partner-logo-row__track {
+  animation: partner-logo-scroll-right 28s linear infinite;
+}
+
+.partner-logo-row__segment {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--partner-logo-row-gap);
+  margin: 0;
+  padding: 0 var(--partner-logo-row-gap) 0 0;
+  list-style: none;
+}
+
+.partner-logo-card {
+  display: grid;
+  width: 5.75rem;
+  height: 4rem;
+  flex: 0 0 5.75rem;
+  place-items: center;
+  padding: 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .partner-logo-img {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: min(100%, 4.25rem);
+  max-height: 2.25rem;
   object-fit: contain;
-  filter: grayscale(100%);
-  opacity: 0.7;
-  transition: opacity 0.3s ease, filter 0.3s ease;
 }
 
-.logo-card:hover .partner-logo-img {
-  filter: grayscale(0%);
-  opacity: 1;
+@keyframes partner-logo-scroll-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
-@keyframes scroll-marquee {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(calc(-33.33% - 1rem));
-  }
+@keyframes partner-logo-scroll-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 
-/* Mobile Adjustments */
-@media (max-width: 768px) {
-  .partner-logos-section {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
+@media (min-width: 768px) {
+  .partner-logo-rows {
+    gap: 1rem;
   }
 
-  .marquee-wrapper {
-    max-width: 100%;
-    /* More room on small screens */
-    padding: 2rem 0;
+  .partner-logo-rows--desktop {
+    display: grid;
   }
 
-  .marquee-fade-left,
-  .marquee-fade-right {
-    width: 35%;
-    /* Wider fade on mobile for better focus on center logo */
+  .partner-logo-rows--mobile {
+    display: none;
+  }
+
+  .partner-logo-row {
+    --partner-logo-row-gap: 1rem;
+  }
+
+  .partner-logo-row--left .partner-logo-row__track,
+  .partner-logo-row--right .partner-logo-row__track {
+    animation-duration: 32s;
   }
 
   .partner-logo-card {
-    min-width: 140px;
-    height: 60px;
-    padding: 0.75rem 1.5rem;
+    width: 9rem;
+    height: 6rem;
+    flex-basis: 9rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-card);
   }
 
-  .marquee-content {
-    gap: 1rem;
-    animation-duration: 30s;
-    /* Slightly faster feel on small screens */
+  .partner-logo-img {
+    width: min(100%, 6.75rem);
+    max-height: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .partner-logo-row {
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  .logo-card {
-    width: 140px;
-    height: 75px;
-    padding: 1rem;
+  .partner-logo-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .partner-logo-row__track {
+    animation: none;
+    transform: none;
+    will-change: auto;
   }
 }
 
 
-
-
-/* footer */
-
+/* Footer — minimal static contact area */
 .footer {
-  background: linear-gradient(rgba(0, 80, 160, 0.9),
-      rgba(0, 130, 200, 0.9)),
-    url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80");
-  background-size: cover;
-  background-position: center;
-  padding: 60px 0 30px;
-  color: #eaf4ff;
-  font-family: "Poppins", sans-serif;
+  padding: 2rem 0 1.25rem;
+  border-top: 1px solid var(--color-line-soft);
+  background: var(--color-surface);
+  color: var(--color-muted);
 }
 
-.footer-title {
-  color: #fff;
+.footer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.footer__brand,
+.footer__contacts {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer__brand {
+  gap: 0.375rem;
+}
+
+.footer__name,
+.footer__description,
+.footer__copyright {
+  margin: 0;
+}
+
+.footer__name {
+  color: var(--color-heading);
+  font-size: var(--text-body);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.footer__description {
+  max-width: 30rem;
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
+}
+
+.footer__contacts {
+  gap: 0.5rem;
+  font-style: normal;
+}
+
+.footer__contact {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--color-heading);
+  font-size: var(--text-body-sm);
   font-weight: 600;
-  margin-bottom: 20px;
-  position: relative;
+  text-decoration: none;
 }
 
-.footer-title::after {
-  content: "";
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 40px;
-  height: 2px;
-  background-color: #00c8ff;
+.footer__contact svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-faint);
 }
 
-.footer-text {
-  font-size: 0.9rem;
-  color: #d7e7f9;
-  line-height: 1.6;
+.footer__contact:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
 }
 
-.footer ul li {
-  margin-bottom: 10px;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #c9e2fa;
+.footer__contact:focus-visible {
+  outline: none;
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-focus);
 }
 
-.footer ul li svg {
-  color: #00bfff;
+.footer__copyright {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-line-soft);
+  font-size: var(--text-caption);
 }
 
-.social-icons {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
+@media (min-width: 768px) {
+  .footer {
+    padding: 2.5rem 0 1.5rem;
+  }
 
-.social-icons .icon {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: 0.3s;
-  cursor: pointer;
-}
+  .footer__content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
 
-.social-icons .icon:hover {
-  background: #00bfff;
-  transform: scale(1.1);
-}
-
-.footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-  padding-top: 15px;
-  font-size: 0.85rem;
-  color: #cce5ff;
-}
-
-.footer-bottom strong {
-  color: #00c8ff;
+  .footer__contacts {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+  }
 }
 
 /* 🧭 Premium Navbar Styles */
@@ -2668,29 +2786,6 @@ h5 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-.partner-logo-card {
-  background: white;
-  padding: 1.25rem 2.25rem;
-  border-radius: 1.25rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 180px;
-  height: 90px;
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
-  filter: grayscale(100%) opacity(0.6);
-}
-
-.partner-logo-card:hover {
-  transform: translateY(-4px);
-  filter: grayscale(0%) opacity(1);
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-200);
-}
-
 .search-btn-circle {
   width: 40px;
   height: 40px;
@@ -2733,12 +2828,12 @@ h5 {
   z-index: 10;
 }
 
-.search-island-wrapper:hover {
+/* .search-island-wrapper:hover {
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.05),
     0 30px 60px -5px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
+  transform: translateY(-1px);
+} */
 
 /* Fix for mobile stacking */
 @media (max-width: 768px) {
@@ -3715,5 +3810,1031 @@ h5 {
   .clinic-map--discovery .clinic-map__canvas {
     min-height: 0;
     height: 100%;
+  }
+}
+
+/* ========================================================================== */
+/* Home — API-backed recommended clinics                                       */
+/* ========================================================================== */
+.recommended-clinics {
+  padding: clamp(3rem, 6vw, 4.5rem) 0;
+  border-top: 1px solid var(--color-line-soft);
+  background: var(--warm-bg);
+}
+
+.recommended-clinics__heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.recommended-clinics__heading h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.recommended-clinics__rail {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding: 0.125rem 0.125rem 0.75rem;
+  scroll-padding-inline: 0.125rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.recommended-clinic-card {
+  display: flex;
+  width: min(23rem, 86vw);
+  min-height: 22rem;
+  flex: 0 0 auto;
+  flex-direction: column;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  scroll-snap-align: start;
+}
+
+.recommended-clinic-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.recommended-clinic-card__logo {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--color-line-soft);
+  border-radius: 999px;
+  background: var(--color-canvas);
+}
+
+.recommended-clinic-card__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.recommended-clinic-card__initial {
+  color: var(--color-heading);
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+.recommended-clinic-card__header h3 {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.recommended-clinic-card__meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.625rem 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-sm);
+  line-height: 1.45;
+}
+
+.recommended-clinic-card__meta svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: var(--color-faint);
+}
+
+.recommended-clinic-card__meta a {
+  color: inherit;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.recommended-clinic-card__meta a:hover {
+  color: var(--color-heading);
+  text-decoration: underline;
+}
+
+.recommended-clinic-card__hours {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.recommended-clinic-card__hours-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.recommended-clinic-card__hours-label svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-faint);
+}
+
+.recommended-clinic-card__hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.recommended-clinic-card__hours-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+
+.recommended-clinic-card__hours-list strong {
+  color: var(--color-heading);
+  font-weight: 600;
+  text-align: right;
+}
+
+.recommended-clinic-card__action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-control);
+  background: var(--color-availability);
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.recommended-clinic-card__action:hover {
+  background: var(--color-availability-hover);
+  color: var(--color-ink);
+}
+
+.recommended-clinic-card__action:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.recommended-clinic-card__action:active {
+  transform: scale(0.98);
+}
+
+.recommended-clinic-card--skeleton {
+  border-color: var(--color-line-soft);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-canvas) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: recommended-clinic-loading 1.4s ease infinite;
+}
+
+.recommended-clinics__state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+}
+
+.recommended-clinics__state a,
+.recommended-clinics__state button {
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.recommended-clinics__state button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+}
+
+@keyframes recommended-clinic-loading {
+  to { background-position: -200% 0; }
+}
+
+@media (min-width: 768px) {
+  .recommended-clinic-card {
+    width: 20rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .recommended-clinics__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 1.25rem;
+  }
+
+  .recommended-clinics__rail {
+    margin-right: -0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .recommended-clinics__state {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recommended-clinic-card--skeleton {
+    animation: none;
+  }
+}
+
+/* ========================================================================== */
+/* QPay payment — full-viewport mobile checkout                               */
+/* ========================================================================== */
+.qpay-payment {
+  --qpay-blue: var(--blue-600);
+  --qpay-blue-soft: var(--blue-50);
+  --qpay-qr-soft: #eef0ff;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  grid-auto-rows: auto;
+  align-content: start;
+  justify-items: stretch;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: max(1rem, env(safe-area-inset-top)) 1.5rem max(0.625rem, env(safe-area-inset-bottom)) 1rem;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.qpay-payment__header {
+  text-align: center;
+}
+
+.qpay-payment--preparing {
+  grid-template-rows: auto 1fr;
+  align-content: stretch;
+}
+
+.qpay-payment__topbar {
+  display: grid;
+  min-height: 2.75rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+}
+
+.qpay-payment__topbar h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(1.125rem, 5.4vw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.qpay-payment__header--left {
+  text-align: left;
+}
+
+.qpay-payment__header--left .qpay-payment__topbar {
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.qpay-payment__header--left .qpay-payment__topbar h2 {
+  overflow: hidden;
+  font-size: clamp(0.9375rem, 4vw, 1.0625rem);
+  letter-spacing: -0.025em;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.qpay-payment__header--left .qpay-payment__topbar > span:last-child {
+  display: none;
+}
+
+.qpay-payment__back-button {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.qpay-payment__back-button svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 2.35;
+}
+
+.qpay-payment__back-button:hover {
+  background: var(--color-canvas);
+}
+
+.qpay-payment__back-button:focus-visible,
+.qpay-payment__method:focus-visible,
+.qpay-payment__check-button:focus-visible,
+.qpay-payment__cancel-button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.qpay-payment__header p {
+  max-width: 19rem;
+  margin: clamp(0.5rem, 1.3dvh, 0.875rem) auto 0;
+  color: var(--color-muted);
+  font-size: clamp(0.875rem, 3.8vw, 1rem);
+  line-height: 1.5;
+}
+
+.qpay-payment__section-title {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: clamp(0.75rem, 3.35vw, 0.875rem);
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.qpay-payment__amount {
+  padding-bottom: clamp(0.75rem, 1.7dvh, 1.125rem);
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+
+.qpay-payment__amount .qpay-payment__section-title {
+  font-size: 0.6875rem;
+}
+
+.qpay-payment__amount-value {
+  margin-top: clamp(0.4rem, 1.05dvh, 0.65rem);
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: clamp(1.75rem, 8.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qpay-payment__total-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: clamp(0.75rem, 1.8dvh, 1.125rem);
+  color: var(--color-ink);
+  font-size: clamp(0.875rem, 3.8vw, 1rem);
+  line-height: 1.25;
+}
+
+.qpay-payment__total-row span,
+.qpay-payment__total-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qpay-payment__total-row strong {
+  flex: 0 0 auto;
+  font-weight: 500;
+}
+
+.qpay-payment__booking {
+  padding-bottom: clamp(0.75rem, 1.7dvh, 1.125rem);
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+
+.qpay-payment__booking .qpay-payment__section-title {
+  margin-bottom: clamp(0.65rem, 1.7dvh, 1rem);
+}
+
+.qpay-payment__booking-item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.3rem;
+}
+
+.qpay-payment__booking-icon {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  color: var(--qpay-blue);
+}
+
+.qpay-payment__booking-icon svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  stroke-width: 1.8;
+}
+
+.qpay-payment__booking-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.qpay-payment__booking-copy strong,
+.qpay-payment__booking-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qpay-payment__booking-copy strong {
+  color: var(--color-ink);
+  font-size: clamp(0.9375rem, 4.2vw, 1.125rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.qpay-payment__booking-copy span {
+  color: var(--color-muted);
+  font-size: clamp(0.8125rem, 3.55vw, 1rem);
+  line-height: 1.2;
+}
+
+.qpay-payment__date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  align-items: center;
+  margin-top: clamp(0.35rem, 0.9dvh, 0.65rem);
+  padding-top: clamp(0.5rem, 1.1dvh, 0.75rem);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-size: clamp(0.8125rem, 3.55vw, 1rem);
+  line-height: 1.2;
+}
+
+.qpay-payment__date-row > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.qpay-payment__date-row svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+}
+
+.qpay-payment__date-row span span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qpay-payment__methods {
+  min-width: 0;
+  text-align: left;
+}
+
+.qpay-payment__methods .qpay-payment__section-title {
+  margin-bottom: clamp(0.5rem, 1.3dvh, 0.75rem);
+}
+
+.qpay-payment__method {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 4.35rem;
+  grid-template-columns: 3.35rem minmax(0, 1fr) 1.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.qpay-payment__method:first-child {
+  border-top: 0;
+}
+
+.qpay-payment__method:hover:not(:disabled) .qpay-payment__method-copy strong {
+  color: var(--qpay-blue);
+}
+
+.qpay-payment__method:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.qpay-payment__method-icon {
+  display: grid;
+  width: 3.1rem;
+  height: 3.1rem;
+  place-items: center;
+  border-radius: 1rem;
+  color: var(--qpay-blue);
+}
+
+.qpay-payment__method-icon--bank {
+  background: var(--qpay-blue-soft);
+}
+
+.qpay-payment__method-icon--qr {
+  background: var(--qpay-qr-soft);
+  color: #6366d8;
+}
+
+.qpay-payment__method-icon svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  stroke-width: 1.8;
+}
+
+.qpay-payment__method-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.qpay-payment__method-copy strong,
+.qpay-payment__method-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qpay-payment__method-copy strong {
+  color: var(--color-ink);
+  font-size: clamp(0.9375rem, 4.15vw, 1.125rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.qpay-payment__method-copy span {
+  color: var(--color-muted);
+  font-size: clamp(0.75rem, 3.4vw, 0.9375rem);
+  line-height: 1.2;
+}
+
+.qpay-payment__method-arrow {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: var(--color-ink);
+  stroke-width: 2.2;
+}
+
+.qpay-payment__status {
+  display: grid;
+  min-height: 3.7rem;
+  grid-template-columns: 3.15rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qpay-payment__status-icon {
+  display: grid;
+  width: 3.1rem;
+  height: 3.1rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--qpay-blue-soft);
+  color: var(--qpay-blue);
+}
+
+.qpay-payment__status-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.qpay-payment__status-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.qpay-payment__status-copy strong,
+.qpay-payment__status-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qpay-payment__status-copy strong {
+  color: var(--color-ink);
+  font-size: clamp(0.9375rem, 4.15vw, 1.125rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.qpay-payment__status-copy span {
+  color: var(--color-muted);
+  font-size: clamp(0.75rem, 3.35vw, 0.9375rem);
+  line-height: 1.2;
+}
+
+.qpay-payment__status--error .qpay-payment__status-icon {
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
+}
+
+.qpay-payment__status--error .qpay-payment__status-copy strong,
+.qpay-payment__status--error .qpay-payment__status-copy span {
+  color: var(--color-danger-text);
+}
+
+.qpay-payment__status--success .qpay-payment__status-icon {
+  background: var(--color-success-surface);
+  color: var(--color-success-text);
+}
+
+.qpay-payment__status--success .qpay-payment__status-copy strong,
+.qpay-payment__status--success .qpay-payment__status-copy span {
+  color: var(--color-success-text);
+}
+
+.qpay-payment__actions {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.qpay-payment__check-button {
+  display: inline-flex;
+  min-height: 3.1rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font-size: clamp(0.875rem, 3.8vw, 1.0625rem);
+  font-weight: 650;
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.qpay-payment__check-button--primary {
+  border-color: var(--color-availability);
+  background: var(--color-availability);
+  color: var(--color-ink);
+  box-shadow: 0 0.35rem 0.9rem rgb(255 242 0 / 0.24);
+}
+
+.qpay-payment__check-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.qpay-payment__check-button--primary:hover:not(:disabled) {
+  border-color: var(--color-availability-hover);
+  background: var(--color-availability-hover);
+  color: var(--color-ink);
+}
+
+.qpay-payment__check-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.qpay-payment__cancel-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font-size: clamp(0.875rem, 3.8vw, 1.0625rem);
+  font-weight: 600;
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.qpay-payment__cancel-button:hover {
+  background: var(--color-canvas);
+}
+
+.qpay-payment__preparing {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 0;
+  text-align: center;
+}
+
+.qpay-payment__preparing > svg {
+  width: 2rem;
+  height: 2rem;
+  color: var(--qpay-blue);
+}
+
+.qpay-payment__preparing h3 {
+  margin: 1rem 0 0;
+  color: var(--color-ink);
+  font-size: var(--text-title);
+}
+
+.qpay-payment__preparing p {
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-sm);
+}
+
+@media (max-height: 700px) and (max-width: 767.98px) {
+  .qpay-payment {
+    gap: 0.38rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+  }
+
+  .qpay-payment__topbar,
+  .qpay-payment__back-button {
+    min-height: 2.5rem;
+  }
+
+  .qpay-payment__header p {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+
+  .qpay-payment__amount,
+  .qpay-payment__booking {
+    padding-bottom: 0.45rem;
+  }
+
+  .qpay-payment__amount-value {
+    margin-top: 0.25rem;
+    font-size: 1.75rem;
+  }
+
+  .qpay-payment__total-row {
+    margin-top: 0.45rem;
+    font-size: 0.8125rem;
+  }
+
+  .qpay-payment__booking .qpay-payment__section-title,
+  .qpay-payment__methods .qpay-payment__section-title {
+    margin-bottom: 0.3rem;
+  }
+
+  .qpay-payment__booking-item {
+    min-height: 2.65rem;
+  }
+
+  .qpay-payment__booking-icon,
+  .qpay-payment__booking-icon svg {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .qpay-payment__booking-copy strong {
+    font-size: 0.875rem;
+  }
+
+  .qpay-payment__booking-copy span,
+  .qpay-payment__date-row {
+    font-size: 0.75rem;
+  }
+
+  .qpay-payment__date-row {
+    min-height: 2.5rem;
+    margin-top: 0.15rem;
+    padding-top: 0.3rem;
+  }
+
+  .qpay-payment__date-row svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .qpay-payment__method {
+    min-height: 3.05rem;
+    gap: 0.55rem;
+    padding: 0.25rem 0;
+  }
+
+  .qpay-payment__method-icon,
+  .qpay-payment__status-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.8rem;
+  }
+
+  .qpay-payment__method-icon svg,
+  .qpay-payment__status-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .qpay-payment__method-copy strong,
+  .qpay-payment__status-copy strong {
+    font-size: 0.875rem;
+  }
+
+  .qpay-payment__method-copy span,
+  .qpay-payment__status-copy span {
+    font-size: 0.6875rem;
+  }
+
+  .qpay-payment__status {
+    min-height: 2.9rem;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .qpay-payment__check-button {
+    min-height: 2.75rem;
+  }
+
+  .qpay-payment__cancel-button {
+    min-height: 2.25rem;
+  }
+}
+
+/* ========================================================================== */
+/* Home — clinic type browser                                                 */
+/* ========================================================================== */
+.clinic-type-browser {
+  width: 100%;
+  max-width: 48rem;
+  margin: 1.5rem auto 0;
+  text-align: left;
+}
+
+.clinic-type-browser__header {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.625rem;
+}
+
+.clinic-type-browser__header h2 {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.clinic-type-browser__next {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-heading);
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.clinic-type-browser__next svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.clinic-type-browser__next:hover:not(:disabled) {
+  background: var(--primary-100);
+  color: var(--primary-800);
+}
+
+.clinic-type-browser__next:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.clinic-type-browser__next:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.clinic-type-grid {
+  display: flex;
+  gap: 0.625rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.125rem 0.125rem 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 0.125rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  list-style: none;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.clinic-type-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.clinic-type-grid > li {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.clinic-type-grid__item {
+  display: flex;
+  width: 4.75rem;
+  min-height: 4rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-heading);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  white-space: nowrap;
+}
+
+.clinic-type-grid__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--primary-600);
+}
+
+.clinic-type-grid__item:hover {
+  border-color: var(--primary-200);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.clinic-type-grid__item:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.clinic-type-grid__item:active {
+  border-color: var(--primary-300);
+  background: var(--primary-100);
+  transform: scale(0.98);
+}
+
+@media (min-width: 768px) {
+  .clinic-type-grid {
+    justify-content: center;
+  }
+
+  .clinic-type-grid__item {
+    width: 6.75rem;
+    min-height: 4.5rem;
+    font-size: var(--text-caption);
+  }
+
+  .clinic-type-grid__icon {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 }

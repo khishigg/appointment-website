@@ -4,6 +4,7 @@ import { FiCheck } from 'react-icons/fi';
 import { formatProductDuration, formatProductPrice } from './productFormat';
 import ServiceCard from './ServiceCard';
 import BookingSummaryCard from './BookingSummaryCard';
+import QPayPaymentStep from './QPayPaymentStep';
 
 export default function BookingStepContent({
     step,
@@ -26,13 +27,19 @@ export default function BookingStepContent({
     selectedTimeSlot,
     selectedBranch,
     selectedClinic,
-    onFinish,
-    onViewDetails,
-    canViewBookings,
+    paymentState,
+    invoice,
+    paymentError,
+    isCheckingPayment,
+    activePaymentView,
+    onCheckPayment,
+    onOpenBankApps,
+    onOpenQr,
+    onBackToPayment,
+    onCancelPayment,
     slideVariants
 }) {
-    // Overlay доторх үйлчилгээ сонголт: карт бие = сонгох, chevron = тайлбар нээх.
-    // Тайлбарын нээлттэй байдлыг сонголтоос тусад нь энд хадгална.
+
     const [expandedServiceIds, setExpandedServiceIds] = useState(() => new Set());
     const toggleServiceDescription = (serviceId) => {
         setExpandedServiceIds((current) => {
@@ -47,7 +54,7 @@ export default function BookingStepContent({
     };
 
     return (
-        <div className="mx-auto w-full max-w-md md:max-w-lg lg:max-w-none flex-1 flex flex-col">
+        <div className={`mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-lg lg:max-w-none ${step === 5 ? 'h-full min-h-0 max-w-none md:max-w-none' : ''}`}>
             {step === 1 && (
                 <Motion.div
                     key="step1"
@@ -57,7 +64,7 @@ export default function BookingStepContent({
                     exit="exit"
                     transition={{ duration: 0.2 }}
                 >
-                    {/* Гарчиг наалдана — гүйлгэхэд ЗӨВХӨН үйлчилгээний картууд хөдөлнө. */}
+
                     <h3 className=" top-0 z-10 bg-surface pb-3 text-sm font-medium text-muted">
                         Үйлчилгээ сонгох
                     </h3>
@@ -77,8 +84,7 @@ export default function BookingStepContent({
                     ) : services.length === 0 ? (
                         <p className="text-sm text-muted">Бүртгэлтэй үйлчилгээ олдсонгүй.</p>
                     ) : (
-                        // Desktop: 2 багана — карт нь 2 мөр хэвээр үлдэж, гүйлгэлт хоёр
-                        // дахин багасна (6 үйлчилгээ = 6 мөрийн оронд 3 мөр).
+
                         <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-3" role="radiogroup" aria-label="Үйлчилгээ сонгох">
                             {services.map((service) => (
                                 <ServiceCard
@@ -142,8 +148,7 @@ export default function BookingStepContent({
                         <label className="block text-sm font-medium text-heading mb-1.5">
                             Утасны дугаар <span className="text-danger-text">*</span>
                         </label>
-                        {/* +976 нь ЗӨВХӨН харагдацын prefix — `patientInfo.phone` 8 оронтой
-                            хэвээр хадгалагдана, серверт илгээх payload өөрчлөгдөхгүй. */}
+
                         <div className="flex">
                             <span
                                 aria-hidden="true"
@@ -229,6 +234,37 @@ export default function BookingStepContent({
                 </Motion.div>
             )}
 
+            {step === 5 && (
+                <Motion.div
+                    key="step5"
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.2 }}
+                    className="h-full min-h-0"
+                >
+                    <QPayPaymentStep
+                        view={activePaymentView}
+                        paymentState={paymentState}
+                        invoice={invoice}
+                        error={paymentError}
+                        isChecking={isCheckingPayment}
+                        confirmation={confirmation}
+                        selectedClinic={selectedClinic}
+                        selectedBranch={selectedBranch}
+                        selectedDoctor={selectedDoctor}
+                        selectedService={selectedService}
+                        selectedTimeSlot={selectedTimeSlot}
+                        onCheck={onCheckPayment}
+                        onOpenBanks={onOpenBankApps}
+                        onOpenQr={onOpenQr}
+                        onBackToPayment={onBackToPayment}
+                        onCancel={onCancelPayment}
+                    />
+                </Motion.div>
+            )}
+
             {step === 6 && (
                 <Motion.div
                     key="step6"
@@ -251,17 +287,15 @@ export default function BookingStepContent({
 
                         <h2 className="text-display text-ink lg:text-title">Захиалга амжилттай үүслээ!</h2>
                         <p className="mt-2 text-body text-muted lg:mt-1">
-                            Таны цаг захиалга төлбөр хүлээгдэж буй төлөвт шилжлээ.
+                            Таны төлбөр баталгаажиж, цаг амжилттай үүслээ.
                         </p>
                         <p className="hidden">
                             Таны имэйл хаяг уруу цаг захиалгын хуудас илгээлээ.
                         </p>
                     </div>
 
-                    {/* Desktop-д захиалгын хураангуйг БАРУУН багана эзэмшинэ
-                        (BookingDetailsPanel). Энд зөвхөн mobile/tablet-д харагдана. */}
                     <BookingSummaryCard
-                        className="mt-6 w-full max-w-sm text-left lg:hidden"
+                        className="mt-6 hidden w-full max-w-sm text-left md:block lg:hidden"
                         selectedDoctor={selectedDoctor}
                         selectedService={selectedService}
                         selectedTimeSlot={selectedTimeSlot}
@@ -269,25 +303,6 @@ export default function BookingStepContent({
                         selectedClinic={selectedClinic}
                         confirmation={confirmation}
                     />
-
-                    <div className="mt-6 flex w-full max-w-sm flex-col gap-3 pb-2 lg:mt-4 lg:max-w-none lg:flex-row lg:pb-0 lg:justify-center">
-                        {canViewBookings ? (
-                            <button
-                                type="button"
-                                onClick={onViewDetails}
-                                className="w-full py-3 px-3 rounded-control bg-primary py-3 font-semibold text-primary-text shadow-card transition-all hover:bg-primary-hover active:scale-[0.98] lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
-                            >
-                                Захиалгын дэлгэрэнгүй
-                            </button>
-                        ) : null}
-                        <button
-                            type="button"
-                            onClick={onFinish}
-                            className="w-full py-3 px-4 rounded-control border border-line text-heading font-medium hover:bg-hover-surface active:scale-[0.98] transition-colors lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
-                        >
-                            Дуусгах
-                        </button>
-                    </div>
                 </Motion.div>
             )}
         </div>

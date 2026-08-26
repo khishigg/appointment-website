@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBookingStore } from '../../store/BookingStore';
 import { useBookingLayout } from '../../hooks/useMediaQuery';
 import {
     createAppointmentBooking,
+    createBookingQPayInvoice,
     declineBookingIdentity,
+    getBookingQPayStatus,
     sendBookingEmailOtp,
     setupBookingPassword,
     verifyBookingEmailOtp,
@@ -23,6 +25,76 @@ const SLIDE_VARIANTS = {
     enter: { opacity: 0, y: -30 },
     center: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: 30 },
+};
+
+const QPAY_RECOVERY_KEY = 'ashid_qpay_pending_booking';
+const POLLING_INTERVAL_MS = 5_000;
+const POLLING_STATES = new Set(['creating', 'open', 'paidPendingConfirmation']);
+const TERMINAL_PAYMENT_STATES = new Set(['confirmed', 'expired', 'failed', 'createUnknown']);
+
+const normalizeStatus = (value) => String(value || '').replace(/[\s_-]/g, '').toLowerCase();
+
+const getBookingStatus = (value = {}) =>
+    value.bookingStatus ?? value.BookingStatus ?? value.status ?? value.Status ?? '';
+
+const normalizeInvoice = (value = {}, previous = null) => {
+    const nextUrls = value.urls ?? value.Urls;
+    const nextQrImage = value.qrImage ?? value.QrImage;
+
+    return {
+        invoiceId: value.invoiceId ?? value.InvoiceId ?? previous?.invoiceId ?? '',
+        bookingStatus: getBookingStatus(value) || previous?.bookingStatus || '',
+        invoiceStatus: value.invoiceStatus ?? value.InvoiceStatus ?? previous?.invoiceStatus ?? '',
+        amount: value.amount ?? value.Amount ?? previous?.amount ?? null,
+        currency: value.currency ?? value.Currency ?? previous?.currency ?? 'MNT',
+        qrCode: value.qrCode ?? value.QrCode ?? previous?.qrCode ?? '',
+        qrImage: nextQrImage || previous?.qrImage || '',
+        urls: Array.isArray(nextUrls) && nextUrls.length > 0
+            ? nextUrls
+            : previous?.urls || [],
+        invoiceExpiresAt:
+            value.invoiceExpiresAt ??
+            value.InvoiceExpiresAt ??
+            previous?.invoiceExpiresAt ??
+            '',
+        errorCode: value.errorCode ?? value.ErrorCode ?? null,
+        errorMessage: value.errorMessage ?? value.ErrorMessage ?? null,
+    };
+};
+
+const classifyPaymentState = (invoice, httpStatus) => {
+    const invoiceStatus = normalizeStatus(invoice?.invoiceStatus);
+    const bookingStatus = normalizeStatus(invoice?.bookingStatus);
+
+    if (bookingStatus === 'confirmed') return 'confirmed';
+    if (invoiceStatus === 'cancelled' || bookingStatus === 'expired') return 'expired';
+    if (invoiceStatus === 'createunknown') return 'createUnknown';
+    if (invoiceStatus === 'failed') return 'failed';
+    if (httpStatus === 202 || invoiceStatus === 'creating') return 'creating';
+    if (invoiceStatus === 'paid' && bookingStatus === 'paid') return 'paidPendingConfirmation';
+    if (invoiceStatus === 'open' && bookingStatus === 'awaitingpayment') return 'open';
+    return 'failed';
+};
+
+const getPaymentErrorMessage = (error) => {
+    if (error?.status === 401 || error?.status === 403) {
+        return 'Төлбөрийн мэдээлэлд хандах эрх хүрэлцэхгүй байна.';
+    }
+    if (error?.status === 404) {
+        return 'Захиалга олдсонгүй эсвэл төлбөрийн хандалт тохирохгүй байна.';
+    }
+    if (error?.status === 409) {
+        return error.message || 'QPay төлбөр үүсгэх боломжгүй байна.';
+    }
+    return error?.message || 'Төлбөрийн мэдээлэл авахад алдаа гарлаа.';
+};
+
+const clearPaymentRecovery = () => {
+    try {
+        sessionStorage.removeItem(QPAY_RECOVERY_KEY);
+    } catch {
+        // Storage access may be blocked; in-memory payment flow still works.
+    }
 };
 
 const getPasswordSetupErrorMessage = (error) => {
@@ -48,16 +120,7 @@ const getPasswordSetupErrorMessage = (error) => {
     return error?.message || 'Нууц үг үүсгэхэд алдаа гарлаа.';
 };
 
-/**
- * BookingDetails — захиалгын алхмуудын STATE эзэмшигч.
- *
- * Бүх breakpoint дээр ИЖИЛ байрлалд, ганц удаа mount хийгддэг; зөвхөн бүрхүүл
- * (ResponsiveSheet mode) солигдоно. Ингэснээр `step` зэрэг state хэзээ ч алдагдахгүй —
- * ялангуяа 409 алдааны дараа хэрэглэгч цагаа дахин сонгоод формдоо буцаж ирэхэд.
- *
- * Flow: 1) Үйлчилгээ → 2) Хувийн мэдээлэл → 3) Бүртгэлийн зөвшөөрөл →
- * 4) Баталгаажуулах суваг → 5) OTP → 6) Баталгаажилт
- */
+
 export default function BookingDetails({
     products = null,
     isLoadingProducts = false,
@@ -67,6 +130,7 @@ export default function BookingDetails({
     const navigate = useNavigate();
     const {
         isBookingDetailsOpen,
+        openBookingDetails,
         closeBookingDetails,
         openTimeSlotModal,
         selectedClinic,
@@ -101,9 +165,7 @@ export default function BookingDetails({
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
     const [identityError, setIdentityError] = useState('');
     const [isDecliningIdentity, setIsDecliningIdentity] = useState(false);
-    const [canViewBookings, setCanViewBookings] = useState(false);
     const [isRegistrationPromptOpen, setIsRegistrationPromptOpen] = useState(false);
-    const [isIdentityMethodPromptOpen, setIsIdentityMethodPromptOpen] = useState(false);
     const [isEmailOtpPromptOpen, setIsEmailOtpPromptOpen] = useState(false);
     const [isPasswordSetupPromptOpen, setIsPasswordSetupPromptOpen] = useState(false);
     const [passwordSetup, setPasswordSetup] = useState(null);
@@ -112,9 +174,20 @@ export default function BookingDetails({
     const [passwordSetupError, setPasswordSetupError] = useState('');
     const [isSettingPassword, setIsSettingPassword] = useState(false);
     const [allowAccountInfo, setAllowAccountInfo] = useState(true);
+    const [paymentState, setPaymentState] = useState('idle');
+    const [invoice, setInvoice] = useState(null);
+    const [paymentError, setPaymentError] = useState('');
+    const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+    const [activePaymentMethod, setActivePaymentMethod] = useState(null);
+    const [isCancelPaymentPromptOpen, setIsCancelPaymentPromptOpen] = useState(false);
+    const invoiceCreationRef = useRef(false);
+    const paymentRequestRef = useRef(null);
+    const paymentSessionRef = useRef(null);
+    const invoiceRef = useRef(null);
+    const isCheckingPaymentRef = useRef(false);
+    const recoveryAttemptRef = useRef('');
 
-    // Admin горимд products prop-оор API-гийн үйлчилгээ ирнэ. Mock (non-admin) урсгалд
-    // productId байхгүй тул захиалга илгээгдэхгүй — зөвхөн демо жагсаалт харагдана.
+
     const services = products ?? MOCK_SERVICES;
 
     // Validation
@@ -167,6 +240,8 @@ export default function BookingDetails({
     // Баталгаажилтын дэлгэцээс гарахад локал алхмыг эхлэлд нь буцаана — эс тэгвэл
     // дараагийн захиалга хуучин баталгаажилтын дэлгэцээр нээгдэнэ.
     const finishBookingFlow = (destination) => {
+        paymentRequestRef.current?.abort();
+        clearPaymentRecovery();
         closeBookingDetails();
         setStep(1);
         setConfirmation(null);
@@ -179,9 +254,7 @@ export default function BookingDetails({
         setOtpError('');
         setIdentityError('');
         setIsDecliningIdentity(false);
-        setCanViewBookings(false);
         setIsRegistrationPromptOpen(false);
-        setIsIdentityMethodPromptOpen(false);
         setIsEmailOtpPromptOpen(false);
         setIsPasswordSetupPromptOpen(false);
         setPasswordSetup(null);
@@ -190,6 +263,16 @@ export default function BookingDetails({
         setPasswordSetupError('');
         setIsSettingPassword(false);
         setAllowAccountInfo(true);
+        setPaymentState('idle');
+        setInvoice(null);
+        setPaymentError('');
+        setIsCheckingPayment(false);
+        setActivePaymentMethod(null);
+        setIsCancelPaymentPromptOpen(false);
+        invoiceCreationRef.current = false;
+        paymentSessionRef.current = null;
+        invoiceRef.current = null;
+        isCheckingPaymentRef.current = false;
         setTimeout(() => {
             resetBooking();
         }, 500);
@@ -226,17 +309,17 @@ export default function BookingDetails({
                 accessToken: hasUserAccount ? userToken : undefined,
             });
 
-            if (!response?.bookingId || !response?.bookingToken) {
+            if (!response?.bookingId || (!hasUserAccount && !response?.bookingToken)) {
                 throw new Error('Захиалгын баталгаажуулалтын мэдээлэл олдсонгүй.');
             }
 
             const session = {
+                clinicId: selectedClinic?.id,
                 bookingId: response.bookingId,
                 bookingToken: response.bookingToken,
                 draft: response,
             };
             setBookingSession(session);
-            setCanViewBookings(false);
             return session;
         } catch (error) {
             if (error.status === 409) {
@@ -260,7 +343,6 @@ export default function BookingDetails({
                 setAllowAccountInfo(false);
                 setSubmitError('Your account personal information is incomplete. Please enter it once below.');
                 setIsRegistrationPromptOpen(false);
-                setIsIdentityMethodPromptOpen(false);
                 setIsEmailOtpPromptOpen(false);
                 setStep(2);
             }
@@ -270,11 +352,202 @@ export default function BookingDetails({
         }
     };
 
-    const handleAcceptRegistration = () => {
-        setIdentityError('');
+    const getPaymentRequestOptions = useCallback((session) => {
+        const auth = useAuthStore.getState();
+        const isUser = auth.isAuthenticated && normalizeStatus(auth.role) === 'user' && Boolean(auth.token);
+
+        return {
+            clinicId: session.clinicId,
+            bookingId: session.bookingId,
+            accessToken: isUser ? auth.token : undefined,
+            bookingToken: isUser ? undefined : session.bookingToken,
+        };
+    }, []);
+
+    const persistPaymentRecovery = useCallback((session, paymentInvoice = null) => {
+        if (!session?.clinicId || !session?.bookingId) return;
+
+        const auth = useAuthStore.getState();
+        const isUser = auth.isAuthenticated && normalizeStatus(auth.role) === 'user' && Boolean(auth.token);
+        const recovery = {
+            clinicId: session.clinicId,
+            bookingId: session.bookingId,
+            invoiceExpiresAt: paymentInvoice?.invoiceExpiresAt || '',
+            ...(isUser || !session.bookingToken ? {} : { bookingToken: session.bookingToken }),
+        };
+
+        try {
+            sessionStorage.setItem(QPAY_RECOVERY_KEY, JSON.stringify(recovery));
+        } catch {
+            // Storage access may be blocked; the active in-memory flow still works.
+        }
+    }, []);
+
+    const applyInvoiceResponse = useCallback((data, httpStatus, session) => {
+        const nextInvoice = normalizeInvoice(data || {}, invoiceRef.current);
+        const nextState = classifyPaymentState(nextInvoice, httpStatus);
+        invoiceRef.current = nextInvoice;
+        setInvoice(nextInvoice);
+
+        setPaymentState(nextState);
+        setPaymentError(
+            nextState === 'failed'
+                ? nextInvoice.errorMessage || 'QPay invoice амжилтгүй боллоо.'
+                : nextState === 'createUnknown'
+                    ? nextInvoice.errorMessage || 'Invoice-ийн үр дүн тодорхойгүй байна. Дахин invoice үүсгэхгүйгээр эмнэлэгтэй холбогдоно уу.'
+                    : nextState === 'expired'
+                        ? 'Invoice-ийн хүчинтэй хугацаа дууссан байна.'
+                        : ''
+        );
+
+        setConfirmation((current) => ({
+            ...(current || session?.draft || {}),
+            ...(data || {}),
+            bookingId: session?.bookingId,
+        }));
+
+        if (nextState === 'confirmed') {
+            setActivePaymentMethod(null);
+            setIsCancelPaymentPromptOpen(false);
+            clearPaymentRecovery();
+            refreshAvailability();
+            setStep(6);
+        } else if (TERMINAL_PAYMENT_STATES.has(nextState)) {
+            clearPaymentRecovery();
+        } else {
+            persistPaymentRecovery(session, nextInvoice);
+        }
+
+        return nextState;
+    }, [persistPaymentRecovery, refreshAvailability]);
+
+    const checkPaymentStatus = useCallback(async (sessionOverride) => {
+        const session = sessionOverride || paymentSessionRef.current;
+        if (!session || isCheckingPaymentRef.current) return;
+
+        isCheckingPaymentRef.current = true;
+        setIsCheckingPayment(true);
+        setPaymentError('');
+        paymentRequestRef.current?.abort();
+        const controller = new AbortController();
+        paymentRequestRef.current = controller;
+
+        try {
+            const response = await getBookingQPayStatus({
+                ...getPaymentRequestOptions(session),
+                signal: controller.signal,
+            });
+            applyInvoiceResponse(response?.data, response?.status, session);
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+
+            setPaymentError(getPaymentErrorMessage(error));
+            if ([401, 403, 404, 409].includes(error.status)) {
+                setPaymentState('failed');
+                clearPaymentRecovery();
+            }
+        } finally {
+            if (paymentRequestRef.current === controller) {
+                paymentRequestRef.current = null;
+            }
+            isCheckingPaymentRef.current = false;
+            setIsCheckingPayment(false);
+        }
+    }, [applyInvoiceResponse, getPaymentRequestOptions]);
+
+    const startPaymentInvoice = useCallback(async (session) => {
+        if (!session || invoiceCreationRef.current) return;
+
+        invoiceCreationRef.current = true;
+        paymentSessionRef.current = session;
+        setBookingSession(session);
+        setStep(5);
+        setPaymentState('creating');
+        setPaymentError('');
+        setActivePaymentMethod(null);
+        persistPaymentRecovery(session);
+
+        paymentRequestRef.current?.abort();
+        const controller = new AbortController();
+        paymentRequestRef.current = controller;
+
+        try {
+            const response = await createBookingQPayInvoice({
+                ...getPaymentRequestOptions(session),
+                signal: controller.signal,
+            });
+            const nextState = applyInvoiceResponse(response?.data, response?.status, session);
+
+            if (POLLING_STATES.has(nextState)) {
+                void checkPaymentStatus(session);
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+
+            const errorInvoiceStatus = normalizeStatus(error.data?.invoiceStatus ?? error.data?.InvoiceStatus);
+            if (errorInvoiceStatus === 'failed' || errorInvoiceStatus === 'createunknown') {
+                applyInvoiceResponse(error.data, error.status, session);
+                return;
+            }
+
+            const isUnknown = normalizeStatus(error.code) === 'createunknown';
+            setPaymentState(isUnknown ? 'createUnknown' : 'failed');
+            setPaymentError(
+                isUnknown
+                    ? 'Invoice үүссэн эсэх тодорхойгүй байна. Дахин invoice үүсгэхгүйгээр эмнэлэгтэй холбогдоно уу.'
+                    : getPaymentErrorMessage(error)
+            );
+            clearPaymentRecovery();
+        } finally {
+            if (paymentRequestRef.current === controller) {
+                paymentRequestRef.current = null;
+            }
+        }
+    }, [applyInvoiceResponse, checkPaymentStatus, getPaymentRequestOptions, persistPaymentRecovery]);
+
+    const continueAfterIdentity = useCallback(async (session, response) => {
+        const merged = {
+            ...(session?.draft || {}),
+            ...(response || {}),
+            bookingId: session?.bookingId,
+        };
+        const paymentAmount = Number(merged.paymentAmount ?? merged.PaymentAmount);
+        const bookingStatus = normalizeStatus(getBookingStatus(merged));
+
+        setConfirmation(merged);
+        refreshAvailability();
         setIsRegistrationPromptOpen(false);
-        setIsIdentityMethodPromptOpen(true);
-    };
+        setIsEmailOtpPromptOpen(false);
+        setIsPasswordSetupPromptOpen(false);
+
+        if (!Number.isFinite(paymentAmount) || paymentAmount < 0) {
+            setStep(5);
+            setPaymentState('failed');
+            setPaymentError('Booking response хүчинтэй paymentAmount агуулаагүй байна.');
+            return;
+        }
+
+        if (paymentAmount === 0) {
+            if (bookingStatus !== 'confirmed') {
+                setStep(5);
+                setPaymentState('failed');
+                setPaymentError('Төлбөргүй захиалга Confirmed төлөвт шилжээгүй байна.');
+                return;
+            }
+
+            clearPaymentRecovery();
+            setPaymentState('confirmed');
+            setStep(6);
+            return;
+        }
+
+        const paymentSession = {
+            ...session,
+            clinicId: session?.clinicId ?? selectedClinic?.id,
+            draft: merged,
+        };
+        await startPaymentInvoice(paymentSession);
+    }, [refreshAvailability, selectedClinic?.id, startPaymentInvoice]);
 
     const handleDeclineRegistration = async () => {
         if (isDecliningIdentity || isSubmitting) return;
@@ -289,17 +562,7 @@ export default function BookingDetails({
                 bookingId: session.bookingId,
                 bookingToken: session.bookingToken,
             });
-            setConfirmation({
-                ...session.draft,
-                ...response,
-                bookingId: session.bookingId,
-            });
-            setCanViewBookings(false);
-            refreshAvailability();
-            setIsRegistrationPromptOpen(false);
-            setIsIdentityMethodPromptOpen(false);
-            setIsEmailOtpPromptOpen(false);
-            setStep(6);
+            await continueAfterIdentity(session, response);
         } catch (error) {
             setIdentityError(error.message || 'Бүртгэлгүй үргэлжлүүлэхэд алдаа гарлаа.');
         } finally {
@@ -307,7 +570,18 @@ export default function BookingDetails({
         }
     };
 
-    const handleSelectEmailIdentity = async () => {
+    // Mobile-ийн registration sheet-ээс ГАДУУР дарвал зөвхөн prompt-ийг хаана.
+    // `handleDeclineRegistration`-ийг энд ашиглаж БОЛОХГҮЙ: тэр нь BE рүү хүсэлт
+    // явуулж, бүртгэлгүй захиалгыг баталгаажуулдаг тусдаа үйлдэл юм.
+    const handleDismissRegistrationPrompt = () => {
+        if (layout !== 'mobile' || isDecliningIdentity || isSubmitting) return;
+
+        setIdentityError('');
+        setIsRegistrationPromptOpen(false);
+        setStep(2);
+    };
+
+    const handleAcceptRegistration = async () => {
         if (isSubmitting || isSendingOtp) return;
 
         if (!canUseAccountInfo && !isEmailValid) {
@@ -322,7 +596,6 @@ export default function BookingDetails({
         try {
             const session = await createBookingSession();
             setIsRegistrationPromptOpen(false);
-            setIsIdentityMethodPromptOpen(false);
             setIsEmailOtpPromptOpen(true);
             setStep(2);
             await sendEmailOtp(session);
@@ -331,13 +604,13 @@ export default function BookingDetails({
         }
     };
 
-    const handleBackToIdentityMethod = () => {
+    const handleBackToRegistrationPrompt = () => {
         setOtpCode('');
         setOtpError('');
         setIdentityError('');
         setStep(2);
         setIsEmailOtpPromptOpen(false);
-        setIsIdentityMethodPromptOpen(true);
+        setIsRegistrationPromptOpen(true);
     };
 
     const sendEmailOtp = async (session) => {
@@ -399,15 +672,7 @@ export default function BookingDetails({
             }
 
             useAuthStore.getState().loginWithToken(response.token, patientInfo);
-            setConfirmation({
-                ...bookingSession.draft,
-                ...response,
-                bookingId: bookingSession.bookingId,
-            });
-            setCanViewBookings(true);
-            refreshAvailability();
-            setIsEmailOtpPromptOpen(false);
-            setStep(6);
+            await continueAfterIdentity(bookingSession, response);
         } catch (error) {
             setOtpError(error.message || 'Баталгаажуулах код буруу байна.');
         } finally {
@@ -453,18 +718,10 @@ export default function BookingDetails({
             }
 
             useAuthStore.getState().loginWithToken(response.token, patientInfo);
-            setConfirmation({
-                ...bookingSession.draft,
-                ...response,
-                bookingId: bookingSession.bookingId,
-            });
-            setCanViewBookings(true);
-            refreshAvailability();
             setPassword('');
             setConfirmPassword('');
             setPasswordSetup(null);
-            setIsPasswordSetupPromptOpen(false);
-            setStep(6);
+            await continueAfterIdentity(bookingSession, response);
         } catch (error) {
             setPasswordSetupError(getPasswordSetupErrorMessage(error));
         } finally {
@@ -478,7 +735,7 @@ export default function BookingDetails({
         setPasswordSetupError('');
         setPasswordSetup(null);
         setIsPasswordSetupPromptOpen(false);
-        setIsIdentityMethodPromptOpen(true);
+        setIsRegistrationPromptOpen(true);
         setStep(2);
     };
 
@@ -499,13 +756,7 @@ export default function BookingDetails({
             // Login хийсэн User-г BE аль хэдийн баталгаажсан гэж буцаавал
             // registration consent болон Gmail OTP-г алгасаад confirmation харуулна.
             if (session.draft?.requiresIdentityVerification === false) {
-                setConfirmation({
-                    ...session.draft,
-                    bookingId: session.bookingId,
-                });
-                setCanViewBookings(true);
-                refreshAvailability();
-                setStep(6);
+                await continueAfterIdentity(session, session.draft);
                 return;
             }
 
@@ -536,7 +787,6 @@ export default function BookingDetails({
             setSubmitError('');
             setNeedsNewTimeSlot(false);
             setIdentityError('');
-            setIsIdentityMethodPromptOpen(false);
             setIsEmailOtpPromptOpen(false);
             setIsRegistrationPromptOpen(true);
         }
@@ -550,6 +800,104 @@ export default function BookingDetails({
         setPatientInfo({ [field]: value });
     };
 
+    const handleOpenBankApps = useCallback(() => {
+        setActivePaymentMethod('banks');
+    }, []);
+
+    const handleOpenQr = useCallback(() => {
+        setActivePaymentMethod('qr');
+    }, []);
+
+    const handleClosePaymentMethod = useCallback(() => {
+        setActivePaymentMethod(null);
+    }, []);
+
+    const handleRequestCancelPayment = useCallback(() => {
+        setIsCancelPaymentPromptOpen(true);
+    }, []);
+
+    const handleContinuePayment = useCallback(() => {
+        setIsCancelPaymentPromptOpen(false);
+    }, []);
+
+    useEffect(() => {
+        if (!POLLING_STATES.has(paymentState) || isCheckingPayment) return undefined;
+
+        const timeoutId = window.setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+                void checkPaymentStatus();
+            }
+        }, POLLING_INTERVAL_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [checkPaymentStatus, isCheckingPayment, paymentState]);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (
+                document.visibilityState === 'visible' &&
+                POLLING_STATES.has(paymentState) &&
+                !isCheckingPaymentRef.current
+            ) {
+                void checkPaymentStatus();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [checkPaymentStatus, paymentState]);
+
+    useEffect(() => {
+        const clinicId = selectedClinic?.id;
+        if (!clinicId || recoveryAttemptRef.current === String(clinicId)) return;
+        recoveryAttemptRef.current = String(clinicId);
+
+        let recovery;
+        try {
+            recovery = JSON.parse(sessionStorage.getItem(QPAY_RECOVERY_KEY) || 'null');
+        } catch {
+            clearPaymentRecovery();
+            return;
+        }
+
+        if (!recovery || String(recovery.clinicId) !== String(clinicId) || !recovery.bookingId) {
+            return;
+        }
+
+        const expiryMs = Date.parse(recovery.invoiceExpiresAt || '');
+        if (Number.isFinite(expiryMs) && expiryMs <= Date.now()) {
+            clearPaymentRecovery();
+            return;
+        }
+
+        const session = {
+            clinicId: recovery.clinicId,
+            bookingId: recovery.bookingId,
+            bookingToken: recovery.bookingToken,
+            draft: { bookingId: recovery.bookingId },
+        };
+        const recoveredInvoice = normalizeInvoice({
+            invoiceExpiresAt: recovery.invoiceExpiresAt,
+            bookingStatus: 'AwaitingPayment',
+            invoiceStatus: 'Creating',
+        });
+
+        invoiceCreationRef.current = true;
+        paymentSessionRef.current = session;
+        invoiceRef.current = recoveredInvoice;
+        setBookingSession(session);
+        setInvoice(recoveredInvoice);
+        setPaymentState('creating');
+        setPaymentError('');
+        setStep(5);
+        openBookingDetails();
+        void checkPaymentStatus(session);
+    }, [checkPaymentStatus, openBookingDetails, selectedClinic?.id]);
+
+    useEffect(() => () => {
+        paymentRequestRef.current?.abort();
+    }, []);
+
     const isPrimaryDisabled = step === 1
         ? (!selectedService || isSubmitting)
         : (!canSubmit || isSubmitting);
@@ -562,7 +910,7 @@ export default function BookingDetails({
             open={isBookingDetailsOpen}
             onClose={handleBack}
             // Илгээж байх үед болон баталгаажилтын дэлгэц дээр санамсаргүй хаалтаас хамгаална
-            dismissible={!isRegistrationPromptOpen && !isIdentityMethodPromptOpen && !isEmailOtpPromptOpen && !isPasswordSetupPromptOpen && step < 3 && !isSubmitting && !isVerifyingOtp && !isSettingPassword}
+            dismissible={!isRegistrationPromptOpen && !isEmailOtpPromptOpen && !isPasswordSetupPromptOpen && step < 3 && !isSubmitting && !isVerifyingOtp && !isSettingPassword}
             label="Захиалгын дэлгэрэнгүй"
         >
             <BookingDetailsPanel
@@ -599,8 +947,6 @@ export default function BookingDetails({
                 identityError={identityError}
                 isRegistrationPromptOpen={isRegistrationPromptOpen}
                 isRegistrationPromptBusy={isDecliningIdentity || isSubmitting}
-                isIdentityMethodPromptOpen={isIdentityMethodPromptOpen}
-                isIdentityMethodPromptBusy={isSubmitting || isSendingOtp}
                 isEmailOtpPromptOpen={isEmailOtpPromptOpen}
                 isPasswordSetupPromptOpen={isPasswordSetupPromptOpen}
                 passwordSetupIdentity={passwordSetup?.verifiedIdentity || ''}
@@ -610,17 +956,30 @@ export default function BookingDetails({
                 isSettingPassword={isSettingPassword}
                 onAcceptRegistration={handleAcceptRegistration}
                 onDeclineRegistration={handleDeclineRegistration}
-                onSelectEmailIdentity={handleSelectEmailIdentity}
-                onBackToIdentityMethod={handleBackToIdentityMethod}
+                onDismissRegistration={handleDismissRegistrationPrompt}
+                isRegistrationBackdropDismissible={layout === 'mobile'}
+                onBackToRegistrationPrompt={handleBackToRegistrationPrompt}
                 onPasswordChange={setPassword}
                 onConfirmPasswordChange={setConfirmPassword}
                 onPasswordSetupSubmit={handlePasswordSetupSubmit}
                 onBackFromPasswordSetup={handleBackFromPasswordSetup}
-                canViewBookings={canViewBookings}
                 onBack={handleBack}
                 onContinue={handleContinue}
                 isSubmitting={isSubmitting}
                 isPrimaryDisabled={isPrimaryDisabled}
+                paymentState={paymentState}
+                invoice={invoice}
+                paymentError={paymentError}
+                isCheckingPayment={isCheckingPayment}
+                activePaymentMethod={activePaymentMethod}
+                isCancelPaymentPromptOpen={isCancelPaymentPromptOpen}
+                onCheckPayment={() => checkPaymentStatus()}
+                onOpenBankApps={handleOpenBankApps}
+                onOpenQr={handleOpenQr}
+                onCancelPayment={handleRequestCancelPayment}
+                onContinuePayment={handleContinuePayment}
+                onConfirmCancelPayment={handleFinish}
+                onClosePaymentMethod={handleClosePaymentMethod}
                 slideVariants={SLIDE_VARIANTS}
             />
         </ResponsiveSheet>

@@ -5,32 +5,11 @@ import { motion as Motion, AnimatePresence } from "framer-motion";
 import Input from "./ui/Input";
 import MapDiscoveryModal from "./MapDiscoveryModal";
 import { createPortal } from "react-dom";
-import { getClinics, resolveClinicAssetUrl } from "../api/clinics";
-import { getCoordinatePair } from './map/locationData';
+import usePublicClinics from '../hooks/usePublicClinics';
 import { useMapOverlayStore } from '../store/MapOverlayStore';
 
 const ALL_AIMAGS = "Бүх аймаг";
 
-
-const normalizeTenant = (tenant) => {
-  const position = getCoordinatePair(tenant);
-  const name = tenant.name ?? tenant.Name ?? "Нэргүй эмнэлэг";
-  const logo = tenant.logo ?? tenant.Logo ?? "";
-
-  return {
-    id: tenant.id ?? tenant.Id,
-    phone: tenant.phoneNumber ?? tenant.PhoneNumber ?? tenant.phone ?? tenant.Phone ?? "",
-    position,
-    bookingEnabled: tenant.bookingEnabled ?? tenant.BookingEnabled ?? true,
-    name,
-    logoUrl: resolveClinicAssetUrl(logo),
-    logoInitial: name.trim().charAt(0).toUpperCase() || "Э",
-    address: tenant.address ?? tenant.Address ?? "",
-    city: tenant.city ?? tenant.City ?? "",
-    province:
-      tenant.province ?? tenant.Province ?? tenant.state ?? tenant.State ?? "",
-  };
-};
 
 // Backend хаягийг латинаар буцаадаг ("… , Ulaanbaatar 16060") тул хоёр бичлэгт тэсвэртэй.
 const UB_PATTERN = /ulaanbaatar|улаанбаатар/i;
@@ -60,6 +39,38 @@ const matchesFilter = (item, filterType, selectedAimag) => {
   if (filterType === "others") return !isUlaanbaatar(item) && !item.province;
 
   return true;
+};
+
+const normalizeSearchText = (value) => String(value ?? '').trim().toLocaleLowerCase('mn');
+
+const matchesClinicType = (item, clinicType) => {
+  if (!clinicType) return true;
+
+  const searchableText = normalizeSearchText([
+    item.name,
+    item.description,
+    ...(Array.isArray(item.productNames) ? item.productNames : []),
+  ].filter(Boolean).join(' '));
+
+  return clinicType.keywords.some((keyword) =>
+    searchableText.includes(normalizeSearchText(keyword))
+  );
+};
+
+const matchesNameQuery = (item, query) =>
+  normalizeSearchText(item.name).includes(normalizeSearchText(query));
+
+const ActiveClinicTypeChip = ({ clinicType, onClear, desktop = false }) => {
+  if (!clinicType) return null;
+
+  return (
+    <div className={`search-clinic-type-filter${desktop ? ' search-clinic-type-filter--desktop' : ''}`}>
+      <button type="button" onClick={onClear} className="search-clinic-type-chip">
+        <span>{clinicType.label}</span>
+        <FiX size={16} aria-hidden="true" />
+      </button>
+    </div>
+  );
 };
 
 const getItemMeta = (item) => item.address || "";
@@ -140,6 +151,8 @@ const MobileSearchOverlay = ({
   error,
   needsAuth,
   onRetry,
+  activeClinicType,
+  onClearClinicType,
 }) => {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState('all'); // 'all' | 'city' | 'locality' | 'others'
@@ -150,6 +163,11 @@ const MobileSearchOverlay = ({
   // chip/dropdown огт харагдахгүй (хуурмаг шүүлтүүр үзүүлэхгүй).
   const showFilters = hasLocationData(items);
   const provinces = getProvinces(items);
+  const filteredItems = items.filter((item) =>
+    matchesClinicType(item, activeClinicType) &&
+    matchesNameQuery(item, query) &&
+    matchesFilter(item, filterType, selectedAimag)
+  );
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -246,6 +264,11 @@ const MobileSearchOverlay = ({
         </AnimatePresence>
       </div>
 
+      <ActiveClinicTypeChip
+        clinicType={activeClinicType}
+        onClear={onClearClinicType}
+      />
+
       {showFilters && (
         <div className="search-modal-chips-container no-scrollbar">
           {[
@@ -278,11 +301,7 @@ const MobileSearchOverlay = ({
             needsAuth={needsAuth}
             onRetry={onRetry}
           />
-          {!isLoading && !error && items
-            .filter((item) =>
-              item.name.toLowerCase().includes(query.toLowerCase()) &&
-              matchesFilter(item, filterType, selectedAimag)
-            )
+          {!isLoading && !error && filteredItems
             .map((item) => (
               <button
                 key={item.id}
@@ -311,7 +330,7 @@ const MobileSearchOverlay = ({
                 </div>
               </button>
             ))}
-          {!isLoading && !error && items.length === 0 && (
+          {!isLoading && !error && filteredItems.length === 0 && (
             <div className="tenant-search-state">Эмнэлэг олдсонгүй.</div>
           )}
         </div>
@@ -331,6 +350,8 @@ const PremiumSearchOverlay = ({
   error,
   needsAuth,
   onRetry,
+  activeClinicType,
+  onClearClinicType,
 }) => {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState('all'); // 'all' | 'city' | 'locality' | 'others'
@@ -358,7 +379,8 @@ const PremiumSearchOverlay = ({
   };
 
   const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(query.toLowerCase()) &&
+    matchesClinicType(item, activeClinicType) &&
+    matchesNameQuery(item, query) &&
     matchesFilter(item, filterType, ALL_AIMAGS)
   );
 
@@ -392,6 +414,12 @@ const PremiumSearchOverlay = ({
         </div>
 
         <div className="search-premium-content no-scrollbar">
+          <ActiveClinicTypeChip
+            clinicType={activeClinicType}
+            onClear={onClearClinicType}
+            desktop
+          />
+
           {/* 📍 Location Filter Chips (Desktop Version) */}
           {showFilters && (
             <Motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
@@ -465,52 +493,23 @@ const PremiumSearchOverlay = ({
   );
 };
 
-export default function SearchBar() {
+export default function SearchBar({ clinicData, clinicTypeRequest }) {
   const setMapOverlayOpen = useMapOverlayStore((state) => state.setMapOverlayOpen);
+  const fallbackClinicData = usePublicClinics({ enabled: !clinicData });
+  const {
+    clinics,
+    isLoading: isLoadingClinics,
+    error: clinicsError,
+    needsAuth,
+    retry: retryTenants,
+  } = clinicData ?? fallbackClinicData;
   const [query, setQuery] = useState("");
   const [showPremiumOverlay, setShowPremiumOverlay] = useState(false);
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
-  const [clinics, setClinics] = useState([]);
-  const [isLoadingClinics, setIsLoadingClinics] = useState(false);
-  const [clinicsError, setClinicsError] = useState("");
-  const [needsAuth, setNeedsAuth] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  // Үүргээс ҮЛ ХАМААРАН бүх хэрэглэгчид бодит дата (mock бүрэн устсан).
-  useEffect(() => {
-    const controller = new AbortController();
-    setIsLoadingClinics(true);
-    setClinicsError("");
-    setNeedsAuth(false);
-
-    // API layer route солихгүй; 401-ийг модал дотор өөрсдөө боловсруулна.
-    getClinics({ signal: controller.signal })
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
-        setClinics(list.map(normalizeTenant));
-      })
-      .catch((error) => {
-        if (error.name === "AbortError") return;
-
-        setClinics([]);
-        if (error.status === 401) {
-          setNeedsAuth(true);
-        } else {
-          setClinicsError(error.message);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setIsLoadingClinics(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [reloadKey]);
+  const [activeClinicType, setActiveClinicType] = useState(null);
 
   const searchItems = clinics;
-  const retryTenants = () => setReloadKey((value) => value + 1);
   const openMapModal = () => {
     setMapOverlayOpen(true);
     setShowMapModal(true);
@@ -521,6 +520,30 @@ export default function SearchBar() {
   };
 
   useEffect(() => () => setMapOverlayOpen(false), [setMapOverlayOpen]);
+
+  useEffect(() => {
+    if (!clinicTypeRequest) return;
+
+    setQuery('');
+    setActiveClinicType(clinicTypeRequest);
+    if (window.innerWidth < 768) {
+      setShowPremiumOverlay(false);
+      setShowMobileOverlay(true);
+    } else {
+      setShowMobileOverlay(false);
+      setShowPremiumOverlay(true);
+    }
+  }, [clinicTypeRequest]);
+
+  const closeMobileOverlay = () => {
+    setShowMobileOverlay(false);
+    setActiveClinicType(null);
+  };
+
+  const closePremiumOverlay = () => {
+    setShowPremiumOverlay(false);
+    setActiveClinicType(null);
+  };
 
   const handleSearch = () => {
     if (window.innerWidth < 768) {
@@ -588,7 +611,7 @@ export default function SearchBar() {
         {showMobileOverlay && (
           <MobileSearchOverlay
             isOpen={showMobileOverlay}
-            onClose={() => setShowMobileOverlay(false)}
+            onClose={closeMobileOverlay}
             query={query}
             setQuery={setQuery}
             items={searchItems}
@@ -596,12 +619,14 @@ export default function SearchBar() {
             error={clinicsError}
             needsAuth={needsAuth}
             onRetry={retryTenants}
+            activeClinicType={activeClinicType}
+            onClearClinicType={() => setActiveClinicType(null)}
           />
         )}
         {showPremiumOverlay && (
           <PremiumSearchOverlay
             isOpen={showPremiumOverlay}
-            onClose={() => setShowPremiumOverlay(false)}
+            onClose={closePremiumOverlay}
             query={query}
             setQuery={setQuery}
             items={searchItems}
@@ -609,6 +634,8 @@ export default function SearchBar() {
             error={clinicsError}
             needsAuth={needsAuth}
             onRetry={retryTenants}
+            activeClinicType={activeClinicType}
+            onClearClinicType={() => setActiveClinicType(null)}
           />
         )}
         {showMapModal && (

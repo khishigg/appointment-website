@@ -1,47 +1,111 @@
-import React from "react";
 import { Container } from "react-bootstrap";
-import globalLogo from "../assets/logos/global_greyscale.png";
-import gurvansorLogo from "../assets/logos/gurvansor_greyscale.png";
-import niislelLogo from "../assets/logos/niislel_greyscale.png";
-import premiumLogo from "../assets/logos/premiumedited1.png";
-import prodentLogo from "../assets/logos/prodent-greyscale.png";
-import uranlomboLogo from "../assets/logos/uranlombo-greyscale.png";
+import { FiArrowRight } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
-const partnerLogos = [
-  { id: 1, src: globalLogo, alt: "Global" },
-  { id: 2, src: gurvansorLogo, alt: "Gurvan Sor" },
-  { id: 3, src: niislelLogo, alt: "Niislel" },
-  { id: 4, src: premiumLogo, alt: "Premium" },
-  { id: 5, src: prodentLogo, alt: "ProDent" },
-  { id: 6, src: uranlomboLogo, alt: "Uran Lombo" },
-];
+const logoModules = import.meta.glob("../assets/logos/*.{png,jpg,jpeg,webp,svg}", {
+  eager: true,
+  import: "default",
+});
 
-export default function PartnerLogos() {
-  // Triple the logos for a smoother infinite scroll effect
-  const scrollLogos = [...partnerLogos, ...partnerLogos, ...partnerLogos];
+const knownLogoAlt = {
+  "global_greyscale.png": "Global",
+  "gurvansor_greyscale.png": "Gurvan Sor",
+  "niislel_greyscale.png": "Niislel",
+  "premiumedited1.png": "Premium",
+  "prodent-greyscale.png": "ProDent",
+  "uranlombo-greyscale.png": "Uran Lombo",
+};
 
-  return (
-    <section className="partner-logos-section py-5 overflow-hidden">
-      <Container>
-        <div className="partner-logos-header text-center mb-5">
-          <p className="text-overline mb-2">БИДЭНТЭЙ ХАМТРАН АЖИЛЛАДАГ ЭМНЭЛГҮҮД</p>
-        </div>
+const getFileName = (path) => path.split("/").pop() || "";
+const isTimestampFile = (fileName) => /^\d+\.[^.]+$/.test(fileName);
 
-        <div className="marquee-wrapper">
-          <div className="marquee-fade-left"></div>
-          <div className="marquee-fade-right"></div>
-          <div className="marquee-content">
-            {scrollLogos.map((logo, index) => (
-              <div key={`${logo.id}-${index}`} className="partner-logo-card">
-                <img
-                  src={logo.src}
-                  alt={logo.alt}
-                  className="partner-logo-img"
-                />
-              </div>
+const partnerLogos = Object.entries(logoModules)
+  .map(([path, src]) => {
+    const fileName = getFileName(path);
+
+    return {
+      id: path,
+      src,
+      fileName,
+      alt: knownLogoAlt[fileName] || "Эмнэлгийн лого",
+    };
+  })
+  .filter((logo, index, logos) => logos.findIndex(({ src }) => src === logo.src) === index)
+  .sort((first, second) => {
+    const firstIsTimestamp = isTimestampFile(first.fileName);
+    const secondIsTimestamp = isTimestampFile(second.fileName);
+
+    if (firstIsTimestamp !== secondIsTimestamp) return Number(firstIsTimestamp) - Number(secondIsTimestamp);
+
+    return first.fileName.localeCompare(second.fileName);
+  });
+
+const createLogoRows = (rowCount) => {
+  const rows = Array.from({ length: rowCount }, () => []);
+
+  partnerLogos.forEach((logo, index) => {
+    rows[index % rows.length].push(logo);
+  });
+
+  return rows;
+};
+
+const desktopLogoRows = createLogoRows(3);
+const mobileLogoRows = createLogoRows(4);
+
+const rowDirections = ["left", "right", "left", "right"];
+
+const LogoRows = ({ rows, className }) => (
+  <div className={`partner-logo-rows ${className}`} aria-label="Бүртгэлтэй эмнэлгүүдийн лого">
+    {rows.map((logos, rowIndex) => {
+      const direction = rowDirections[rowIndex];
+
+      return (
+        <div key={direction + rowIndex} className={`partner-logo-row partner-logo-row--${direction}`}>
+          <div className="partner-logo-row__track">
+            {[false, true].map((isDuplicate) => (
+              <ul
+                key={isDuplicate ? "duplicate" : "original"}
+                className="partner-logo-row__segment"
+                aria-hidden={isDuplicate || undefined}
+              >
+                {logos.map((logo) => (
+                  <li key={`${logo.id}-${isDuplicate ? "duplicate" : "original"}`} className="partner-logo-card">
+                    <img
+                      src={logo.src}
+                      alt={isDuplicate ? "" : logo.alt}
+                      className="partner-logo-img"
+                      loading="lazy"
+                    />
+                  </li>
+                ))}
+              </ul>
             ))}
           </div>
         </div>
+      );
+    })}
+  </div>
+);
+
+export default function PartnerLogos() {
+  return (
+    <section className="partner-logos-section" aria-labelledby="partner-logos-title">
+      <Container className="partner-logos-section__container">
+        <header className="partner-logos-header">
+          <h2 id="partner-logos-title">Манай программд бүртгэлтэй эмнэлгүүд</h2>
+          <p className="partner-logos-header__description">
+            Олон клиник, эмнэлэг манай платформыг ашиглан цаг захиалгаа хялбар удирдаж,
+            өвчтөнүүддээ илүү хурдан, чанартай үйлчилгээ үзүүлж байна.
+          </p>
+          <Link to="/register" className="partner-logos-header__action">
+            <span>Бидэнтэй нэгдэх</span>
+            <FiArrowRight aria-hidden="true" />
+          </Link>
+        </header>
+
+        <LogoRows rows={desktopLogoRows} className="partner-logo-rows--desktop" />
+        <LogoRows rows={mobileLogoRows} className="partner-logo-rows--mobile" />
       </Container>
     </section>
   );

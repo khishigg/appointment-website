@@ -5,9 +5,9 @@ import BookingStepContent from './BookingStepContent';
 import BookingStepper from './BookingStepper';
 import BookingSummaryCard from './BookingSummaryCard';
 import RegistrationPrompt from './RegistrationPrompt';
-import IdentityMethodPrompt from './IdentityMethodPrompt';
 import EmailOtpPrompt from './EmailOtpPrompt';
 import PasswordSetupPrompt from './PasswordSetupPrompt';
+import { QPayCancelPrompt, QPayQrPrompt } from './QPayPaymentStep';
 
 /**
  * BookingDetailsPanel — захиалгын алхмуудын АГУУЛГА (header + step + footer).
@@ -50,8 +50,6 @@ export default function BookingDetailsPanel({
     identityError,
     isRegistrationPromptOpen,
     isRegistrationPromptBusy,
-    isIdentityMethodPromptOpen,
-    isIdentityMethodPromptBusy,
     isEmailOtpPromptOpen,
     isPasswordSetupPromptOpen,
     passwordSetupIdentity,
@@ -61,17 +59,30 @@ export default function BookingDetailsPanel({
     isSettingPassword,
     onAcceptRegistration,
     onDeclineRegistration,
-    onSelectEmailIdentity,
-    onBackToIdentityMethod,
+    onDismissRegistration,
+    isRegistrationBackdropDismissible,
+    onBackToRegistrationPrompt,
     onPasswordChange,
     onConfirmPasswordChange,
     onPasswordSetupSubmit,
     onBackFromPasswordSetup,
-    canViewBookings,
     onBack,
     onContinue,
     isSubmitting,
     isPrimaryDisabled,
+    paymentState,
+    invoice,
+    paymentError,
+    isCheckingPayment,
+    activePaymentMethod,
+    isCancelPaymentPromptOpen,
+    onCheckPayment,
+    onOpenBankApps,
+    onOpenQr,
+    onCancelPayment,
+    onContinuePayment,
+    onConfirmCancelPayment,
+    onClosePaymentMethod,
     slideVariants,
 }) {
     return (
@@ -91,9 +102,14 @@ export default function BookingDetailsPanel({
                 `lg:items-start` ХЭРЭГЛЭХГҮЙ: тэр нь мөрийн өндрийг агуулгаар тодорхойлж,
                 зүүн баганын `lg:h-full`-тэй зөрчилдөн хоёр дахь gүйлгэлт үүсгэдэг байв.
                 Оронд нь grid stretch хэвээр үлдэж, хураангуй карт `lg:self-start` авна. */}
-            <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 lg:overflow-hidden lg:px-5 lg:py-4">
-                <div className="relative lg:h-full lg:min-h-0">
-                    <div className="lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+            <div className={`flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 lg:min-h-0 lg:px-5 lg:py-4 ${step === 5
+                ? activePaymentMethod === 'banks'
+                    ? 'booking-payment-stage min-h-0 overflow-x-hidden overflow-y-auto px-4 py-5 lg:block lg:overflow-hidden lg:px-5 lg:py-4'
+                    : 'booking-payment-stage h-[100dvh] min-h-0 overflow-hidden px-0 py-0 lg:block lg:h-auto lg:overflow-hidden lg:px-5 lg:py-4'
+                : 'lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 lg:overflow-hidden'
+            }`}>
+                <div className={`relative lg:h-full lg:min-h-0 ${step === 5 ? 'h-full min-h-0' : ''}`}>
+                    <div className={`lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${step === 5 && activePaymentMethod !== 'banks' ? 'h-full min-h-0 overflow-hidden lg:overflow-y-auto' : ''}`}>
                     <AnimatePresence mode="wait">
                         <BookingStepContent
                             step={step}
@@ -116,9 +132,16 @@ export default function BookingDetailsPanel({
                             selectedBranch={selectedBranch}
                             selectedClinic={selectedClinic}
                             selectedDoctor={selectedDoctor}
-                            onFinish={onFinish}
-                            onViewDetails={onViewDetails}
-                            canViewBookings={canViewBookings}
+                            paymentState={paymentState}
+                            invoice={invoice}
+                            paymentError={paymentError}
+                            isCheckingPayment={isCheckingPayment}
+                            activePaymentView={activePaymentMethod}
+                            onCheckPayment={onCheckPayment}
+                            onOpenBankApps={onOpenBankApps}
+                            onOpenQr={onOpenQr}
+                            onBackToPayment={onClosePaymentMethod}
+                            onCancelPayment={onCancelPayment}
                             slideVariants={slideVariants}
                         />
                     </AnimatePresence>
@@ -136,7 +159,7 @@ export default function BookingDetailsPanel({
                     утгыг эрхэмлэнэ). Өмнө нь энэ багана хоосон үлдэж, амжилтын
                     дэлгэц бүх зүйлээ зүүн баганад босоо өрснөөс gүйлгэлт үүсдэг байв. */}
                 <BookingSummaryCard
-                    className="hidden lg:block lg:self-start"
+                    className={step === 5 ? 'hidden' : 'hidden lg:block lg:self-start'}
                     selectedDoctor={selectedDoctor}
                     selectedService={selectedService}
                     selectedTimeSlot={selectedTimeSlot}
@@ -180,20 +203,35 @@ export default function BookingDetailsPanel({
                 </div>
             ) : null}
 
+            {step === 6 ? (
+                <div className="sticky bottom-0 z-30 border-t border-line-soft bg-surface px-4 py-3 lg:px-5 lg:py-2.5">
+                    <div className="mx-auto flex w-full max-w-sm flex-col gap-3 lg:max-w-none lg:flex-row lg:justify-center">
+                        <button
+                            type="button"
+                            onClick={onViewDetails}
+                            className="min-h-12 w-full rounded-control bg-primary px-4 py-3 font-semibold text-primary-text shadow-card transition-all hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-focus active:scale-[0.98] lg:min-h-0 lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
+                        >
+                            Захиалгын дэлгэрэнгүй
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onFinish}
+                            className="min-h-12 w-full rounded-control border border-line bg-surface px-4 py-3 font-medium text-heading transition-colors hover:bg-hover-surface focus:outline-none focus:ring-2 focus:ring-focus active:scale-[0.98] lg:min-h-0 lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
+                        >
+                            Дуусгах
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
             {isRegistrationPromptOpen ? (
                 <RegistrationPrompt
                     error={identityError}
                     isBusy={isRegistrationPromptBusy}
                     onAccept={onAcceptRegistration}
                     onDecline={onDeclineRegistration}
-                />
-            ) : null}
-
-            {isIdentityMethodPromptOpen ? (
-                <IdentityMethodPrompt
-                    error={identityError}
-                    isBusy={isIdentityMethodPromptBusy}
-                    onSelectEmail={onSelectEmailIdentity}
+                    onDismiss={onDismissRegistration}
+                    isBackdropDismissible={isRegistrationBackdropDismissible}
                 />
             ) : null}
 
@@ -207,7 +245,7 @@ export default function BookingDetailsPanel({
                     isVerifying={isVerifyingOtp}
                     onCodeChange={onOtpChange}
                     onResend={onResendOtp}
-                    onBack={onBackToIdentityMethod}
+                    onBack={onBackToRegistrationPrompt}
                 />
             ) : null}
 
@@ -222,6 +260,24 @@ export default function BookingDetailsPanel({
                     onConfirmPasswordChange={onConfirmPasswordChange}
                     onSubmit={onPasswordSetupSubmit}
                     onBack={onBackFromPasswordSetup}
+                />
+            ) : null}
+
+            {activePaymentMethod === 'qr' ? (
+                <QPayQrPrompt
+                    invoice={invoice}
+                    paymentState={paymentState}
+                    isChecking={isCheckingPayment}
+                    onCheck={onCheckPayment}
+                    onOpenBanks={onOpenBankApps}
+                    onClose={onClosePaymentMethod}
+                />
+            ) : null}
+
+            {isCancelPaymentPromptOpen ? (
+                <QPayCancelPrompt
+                    onContinue={onContinuePayment}
+                    onConfirm={onConfirmCancelPayment}
                 />
             ) : null}
         </>
