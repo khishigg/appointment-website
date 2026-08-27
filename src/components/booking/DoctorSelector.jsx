@@ -125,7 +125,7 @@ export default function DoctorSelector({
         return (
             <div className="booking-data-state booking-data-state--error" role="alert">
                 <span>{error}</span>
-                <button type="button" onClick={onRetry}>Дахин оролдох</button>
+                <button type="button" onClick={onRetry} className="booking-cta-outline rounded-control px-3 py-2 text-xs font-bold">Дахин оролдох</button>
             </div>
         );
     }
@@ -357,7 +357,7 @@ const DoctorAvailability = ({
                     <span>{availabilityError}</span>
                     <button
                         type="button"
-                        className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold text-white"
+                        className="booking-cta-outline rounded-lg px-3 py-2 text-xs font-bold"
                         onClick={() => setReloadKey((value) => value + 1)}
                     >
                         Дахин оролдох

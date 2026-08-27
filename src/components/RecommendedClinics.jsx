@@ -99,7 +99,7 @@ export default function RecommendedClinics({ clinicData }) {
             <div className="container">
                 <div className="recommended-clinics__heading">
                     <div>
-                        <h3 id="recommended-clinics-title">Санал болгож буй эмнэлгүүд</h3>
+                        <h3 id="recommended-clinics-title">Онцлох эмнэлгүүд</h3>
                     </div>
                 </div>
 

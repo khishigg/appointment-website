@@ -20,7 +20,7 @@ const BranchLocationCard = ({
     return (
         <article
             className={`rounded-panel border bg-surface p-4 shadow-overlay transition-shadow ${
-                isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-line-soft'
+                isSelected ? 'booking-selection-border' : 'border-line-soft'
             }`}
         >
             <div className="flex items-start justify-between gap-3">
@@ -63,7 +63,7 @@ const BranchLocationCard = ({
             <div className="mt-4 grid grid-cols-2 gap-2.5">
                 <button
                     type="button"
-                    className="min-h-11 rounded-control bg-primary px-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+                    className="booking-cta-primary min-h-11 rounded-control px-3 text-sm font-semibold"
                     onClick={() => onBookBranch?.(item.source)}
                 >
                     Цаг захиалах
@@ -119,7 +119,7 @@ export default function LocationSelector({
         return (
             <div className="booking-data-state booking-data-state--error" role="alert">
                 <span>{error}</span>
-                <button type="button" onClick={onRetry}>Дахин оролдох</button>
+                <button type="button" onClick={onRetry} className="booking-cta-outline rounded-control px-3 py-2 text-xs font-bold">Дахин оролдох</button>
             </div>
         );
     }

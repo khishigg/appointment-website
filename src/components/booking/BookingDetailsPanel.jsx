@@ -194,7 +194,7 @@ export default function BookingDetailsPanel({
                             disabled={isPrimaryDisabled}
                             className={`flex-1 rounded-control px-4 py-3 font-semibold transition-all duration-200 lg:flex-none lg:px-6 lg:py-2 lg:text-sm ${isPrimaryDisabled
                                 ? 'cursor-not-allowed bg-disabled-bg text-disabled-text'
-                                : 'bg-primary text-primary-text hover:bg-primary-hover active:scale-[0.98]'
+                                : 'booking-cta-primary'
                                 }`}
                         >
                             {isSubmitting ? 'Илгээж байна...' : 'Үргэлжлүүлэх'}
@@ -209,7 +209,7 @@ export default function BookingDetailsPanel({
                         <button
                             type="button"
                             onClick={onViewDetails}
-                            className="min-h-12 w-full rounded-control bg-primary px-4 py-3 font-semibold text-primary-text shadow-card transition-all hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-focus active:scale-[0.98] lg:min-h-0 lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
+                            className="booking-cta-primary min-h-12 w-full rounded-control px-4 py-3 font-semibold lg:min-h-0 lg:w-auto lg:px-5 lg:py-2 lg:text-sm"
                         >
                             Захиалгын дэлгэрэнгүй
                         </button>

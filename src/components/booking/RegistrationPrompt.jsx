@@ -86,7 +86,7 @@ export default function RegistrationPrompt({
                         onClick={onAccept}
                         disabled={isBusy}
                         autoFocus
-                        className="min-h-12 w-full rounded-[14px] bg-primary px-4 py-3 text-[15px] font-semibold text-primary-text shadow-sm transition-all hover:bg-primary-hover active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
+                        className="booking-cta-primary min-h-12 w-full rounded-[14px] px-4 py-3 text-[15px] font-semibold disabled:cursor-wait disabled:opacity-50"
                     >
                         Тийм
                     </button>

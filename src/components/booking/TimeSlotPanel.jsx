@@ -315,7 +315,7 @@ export default function TimeSlotPanel({
                     ) : availabilityError ? (
                         <div className="booking-data-state booking-data-state--error" role="alert">
                             <span>{availabilityError}</span>
-                            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>
+                            <button type="button" onClick={() => setReloadKey((value) => value + 1)} className="booking-cta-outline rounded-control px-3 py-2 text-xs font-bold">
                                 Дахин оролдох
                             </button>
                         </div>
@@ -434,7 +434,7 @@ function TimeButton({ slot, day, apiDate, isSelected, onSelectSlot }) {
             className={`
                 rounded-lg py-2 text-body font-semibold transition-all duration-300
                 ${isSelected
-                    ? 'z-10 scale-[1.05] bg-primary text-primary-text shadow-lg'
+                    ? 'booking-selection-active z-10 scale-[1.05] shadow-lg'
                     : 'border border-black/5 bg-availability text-ink shadow-sm hover:bg-availability-hover active:scale-95'}
             `}
         >

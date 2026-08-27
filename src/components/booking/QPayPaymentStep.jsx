@@ -438,7 +438,7 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
                 {source ? <InvoiceExpiry expiresAt={invoice?.invoiceExpiresAt} /> : null}
                 {source ? <div className="mt-4 w-full text-left"><PaymentStatusCard paymentState={paymentState} isChecking={isChecking} hideIdle /></div> : null}
                 {source ? <div className="mt-4 w-full"><CheckPaymentButton isChecking={isChecking} onCheck={onCheck} primary /></div> : (
-                    <button type="button" onClick={onOpenBanks} className="mt-4 min-h-12 w-full rounded-control bg-primary px-4 py-3 font-semibold text-primary-text hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-focus">Банкны апп-аар төлөх</button>
+                    <button type="button" onClick={onOpenBanks} className="booking-cta-primary mt-4 min-h-12 w-full rounded-control px-4 py-3 font-semibold">Банкны апп-аар төлөх</button>
                 )}
             </div>
         </PaymentPrompt>
@@ -448,7 +448,7 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
 export const QPayCancelPrompt = ({ onContinue, onConfirm }) => (
     <PaymentPrompt id="qpay-cancel" title="Төлбөрийн урсгалыг цуцлах уу?" description="Захиалга сервер дээр шууд цуцлагдахгүй, хүчинтэй хугацаа дуусахад автоматаар дуусна." onClose={onContinue}>
         <div className="grid gap-3 sm:grid-cols-2">
-            <button type="button" onClick={onContinue} className="min-h-12 rounded-control bg-primary px-4 py-3 font-semibold text-primary-text hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-focus">Үргэлжлүүлэн төлөх</button>
+            <button type="button" onClick={onContinue} className="booking-cta-primary min-h-12 rounded-control px-4 py-3 font-semibold">Үргэлжлүүлэн төлөх</button>
             <button type="button" onClick={onConfirm} className="min-h-12 rounded-control border border-danger bg-surface px-4 py-3 font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus">Цуцлах</button>
         </div>
     </PaymentPrompt>

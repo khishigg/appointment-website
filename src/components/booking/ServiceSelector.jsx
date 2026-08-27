@@ -75,7 +75,7 @@ export default function ServiceSelector({
         return (
             <div className="booking-data-state booking-data-state--error" role="alert">
                 <span>{error}</span>
-                <button type="button" onClick={onRetry}>Дахин оролдох</button>
+                <button type="button" onClick={onRetry} className="booking-cta-outline rounded-control px-3 py-2 text-xs font-bold">Дахин оролдох</button>
             </div>
         );
     }

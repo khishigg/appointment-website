@@ -64,10 +64,10 @@ export default function ServiceCard({
                     <span className="flex flex-shrink-0 items-center gap-2">
                         {selected ? (
                             <span
-                                className="flex h-5 w-5 items-center justify-center rounded-full bg-primary"
+                                className="booking-selection-active flex h-5 w-5 items-center justify-center rounded-full"
                                 aria-hidden="true"
                             >
-                                <FiCheck className="h-3 w-3 text-white" />
+                                <FiCheck className="h-3 w-3" />
                             </span>
                         ) : null}
                         {hasDescription ? (

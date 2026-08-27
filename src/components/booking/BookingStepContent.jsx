@@ -76,7 +76,7 @@ export default function BookingStepContent({
                             <button
                                 type="button"
                                 onClick={onReloadLists}
-                                className="mt-2 font-semibold underline"
+                                className="booking-cta-outline mt-2 rounded-control px-3 py-2 text-xs font-semibold"
                             >
                                 Дахин оролдох
                             </button>
@@ -199,7 +199,7 @@ export default function BookingStepContent({
                                 <button
                                     type="button"
                                     onClick={onPickAnotherTimeSlot}
-                                    className="mt-3 w-full py-2.5 rounded-control bg-primary text-primary-text text-sm font-semibold active:scale-[0.98] transition-all"
+                                    className="booking-cta-primary mt-3 w-full rounded-control py-2.5 text-sm font-semibold"
                                 >
                                     Өөр цаг сонгох
                                 </button>
@@ -225,7 +225,7 @@ export default function BookingStepContent({
                             <button
                                 type="button"
                                 onClick={onPickAnotherTimeSlot}
-                                className="mt-3 w-full rounded-control bg-primary py-2.5 text-sm font-semibold text-primary-text transition-all active:scale-[0.98]"
+                                className="booking-cta-primary mt-3 w-full rounded-control py-2.5 text-sm font-semibold"
                             >
                                 Өөр цаг сонгох
                             </button>

@@ -32,7 +32,7 @@ export default function BookingStepper({ step = 1 }) {
                             <span
                                 className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-pill border text-label transition-colors lg:h-5 lg:w-5 ${
                                     isDone || isActive
-                                        ? 'border-primary bg-primary text-primary-text'
+                                        ? 'booking-selection-active'
                                         : 'border-line bg-surface text-muted'
                                 }`}
                             >
@@ -56,7 +56,7 @@ export default function BookingStepper({ step = 1 }) {
                         {index < STEPS.length - 1 ? (
                             <span
                                 className={`h-px min-w-4 flex-1 transition-colors lg:min-w-10 lg:flex-none ${
-                                    isDone ? 'bg-primary' : 'bg-line'
+                                    isDone ? 'booking-selection-line' : 'bg-line'
                                 }`}
                                 aria-hidden="true"
                             />

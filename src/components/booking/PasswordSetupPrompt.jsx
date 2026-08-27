@@ -87,7 +87,7 @@ export default function PasswordSetupPrompt({
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="min-h-12 w-full rounded-control bg-primary px-4 py-3 text-[15px] font-semibold text-primary-text shadow-card transition-all hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="booking-cta-primary min-h-12 w-full rounded-control px-4 py-3 text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isSubmitting ? 'Үүсгэж байна...' : 'Үүсгэх'}
                         </button>
