@@ -1,5 +1,5 @@
 // src/components/FeaturesSectionV2.jsx
-import { Container, Row, Col, Card } from "react-bootstrap";
+import Card from "./ui/Card";
 import { FaUserMd, FaHospital, FaComments, FaStethoscope } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -12,11 +12,11 @@ const features = [
 
 export default function FeaturesSection() {
   return (
-    <Container className="py-5 text-center">
-      <h2 className="fw-bold mb-4 text-primary hp-underline">Бид юу санал болгодог вэ</h2>
-      <Row className="gy-4">
+    <div className="page-container py-12 text-center">
+      <h2 className="font-bold mb-6 text-primary hp-underline">Бид юу санал болгодог вэ</h2>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 min-[992px]:grid-cols-4">
         {features.map((f, i) => (
-          <Col lg={3} md={6} key={f.title}>
+          <div className="min-w-0" key={f.title}>
             <motion.div
               initial={{opacity:0, y:18}}
               whileInView={{opacity:1, y:0}}
@@ -24,17 +24,17 @@ export default function FeaturesSection() {
               transition={{ duration:0.35, delay:i*0.05 }}
             >
               <Card
-                className={`rounded-4 p-4 border-0 h-100 ${i===0 ? "hp-glass" : "shadow-sm"}`}
+                className={`rounded-panel p-6 border-0 h-full ${i===0 ? "hp-glass" : "shadow-sm"}`}
                 style={i===0 ? { outline: "1px solid rgba(0,102,255,0.15)" } : {}}
               >
-                <div className="hp-icon mx-auto mb-3 text-primary">{f.icon}</div>
-                <h5 className="fw-bold">{f.title}</h5>
-                <p className="text-muted small mb-0">{f.text}</p>
+                <div className="hp-icon mx-auto mb-4 text-primary">{f.icon}</div>
+                <h5 className="mb-2 text-xl font-bold leading-tight">{f.title}</h5>
+                <p className="text-muted text-sm mb-0">{f.text}</p>
               </Card>
             </motion.div>
-          </Col>
+          </div>
         ))}
-      </Row>
-    </Container>
+      </div>
+    </div>
   );
 }

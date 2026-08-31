@@ -163,7 +163,7 @@ export default function DoctorSelector({
                             {/* --- Header: Avatar + Info --- */}
                             <div className="flex gap-3">
                                 {/* Avatar: Square with rounded corners */}
-                                <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
+                                <div className="w-16 h-16 md:w-20 md:h-20 shrink-0">
                                     <div className="w-full h-full rounded-xl overflow-hidden border border-line-soft shadow-sm">
                                         <img
                                             src={displayImage}
@@ -382,7 +382,7 @@ const DoctorAvailability = ({
                             openTimeSlotModal(slot.apiDate);
                         }}
                         className={`
-                            snap-start flex flex-col items-center justify-center min-w-[105px] md:min-w-0 h-[95px] md:h-[88px] rounded-lg border transition-all
+                            snap-start flex h-[84px] min-w-[90px] flex-col items-center justify-center rounded-none border transition-all md:h-[84px] md:min-w-0
                             ${isDisabled
                                 ? 'bg-canvas text-faint border-transparent cursor-not-allowed'
                                 : isSlotSelected
@@ -411,7 +411,7 @@ const DoctorAvailability = ({
                     selectDoctor(doctor);
                     openTimeSlotModal();
                 }}
-                className="hidden md:flex h-[95px] md:h-[88px] items-center justify-center rounded-lg border border-line bg-surface text-body-sm font-semibold text-heading transition-all hover:bg-hover-surface active:scale-95"
+                className="hidden h-[84px] items-center justify-center rounded-none border border-line bg-surface text-body-sm font-semibold text-heading transition-all hover:bg-hover-surface active:scale-95 md:flex"
             >
                 more
             </button>

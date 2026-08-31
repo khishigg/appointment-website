@@ -1,5 +1,4 @@
 import { createElement } from "react";
-import { Container } from "react-bootstrap";
 import { FaFacebookF, FaInstagram, FaYoutube } from "react-icons/fa";
 import { FiGlobe } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -26,7 +25,7 @@ const socialChannels = [
 export default function Footer() {
   return (
     <footer className="footer" aria-label="Хөл хэсэг">
-      <Container className="footer__container">
+      <div className="page-container footer__container">
         <Link to="/" className="footer__brand" aria-label="Ashid Soft нүүр хуудас">
           <img src={ashidLogo} alt="Ashid Logo" className="footer__brand-logo" />
           <span className="footer__brand-name">ASHID SOFT</span>
@@ -51,7 +50,7 @@ export default function Footer() {
           {socialChannels.map(({ label, icon }) => (
             <li key={label} className="footer__social" title={label}>
               {createElement(icon, { "aria-hidden": true })}
-              <span className="visually-hidden">{label}</span>
+              <span className="sr-only">{label}</span>
             </li>
           ))}
         </ul>
@@ -59,7 +58,7 @@ export default function Footer() {
         <div className="footer__closing">
           <p className="footer__copyright">© 2026 Ашид Софт ХХК.</p>
         </div>
-      </Container>
+      </div>
     </footer>
   );
 }

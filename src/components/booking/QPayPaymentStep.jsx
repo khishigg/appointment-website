@@ -6,6 +6,7 @@ import {
     FiCalendar,
     FiChevronRight,
     FiCheckCircle,
+    FiClipboard,
     FiClock,
     FiCreditCard,
     FiExternalLink,
@@ -13,6 +14,7 @@ import {
     FiHome,
     FiRefreshCw,
     FiUser,
+    FiX,
 } from 'react-icons/fi';
 
 const formatAmount = (amount, currency = 'MNT') => {
@@ -163,13 +165,14 @@ const formatBookingDate = (value) => {
     return `${parts.year}.${pad(parts.month)}.${pad(parts.day)} (${MONGOLIAN_WEEKDAYS[date.getDay()]})`;
 };
 
-const CompactBookingSummary = ({ confirmation, selectedClinic, selectedBranch, selectedDoctor, selectedTimeSlot }) => {
+const CompactBookingSummary = ({ confirmation, selectedClinic, selectedBranch, selectedDoctor, selectedService, selectedTimeSlot }) => {
     const confirmedDateTime = splitDateTime(confirmation?.aptDateTime);
     const date = confirmedDateTime.date || selectedTimeSlot?.apiDate || selectedTimeSlot?.date || '';
     const time = confirmedDateTime.time || selectedTimeSlot?.time || '';
     const branchName = confirmation?.clinicName || selectedBranch?.name || selectedClinic?.name || '';
     const clinicName = selectedClinic?.name && selectedClinic.name !== branchName ? selectedClinic.name : '';
     const doctorName = selectedDoctor?.name || '';
+    const serviceName = confirmation?.productName || selectedService?.name || '';
 
     return (
         <section className="qpay-payment__booking" aria-label="Төлөх захиалгын мэдээлэл">
@@ -188,6 +191,15 @@ const CompactBookingSummary = ({ confirmation, selectedClinic, selectedBranch, s
                     <span>Эмч</span>
                 </span>
             </div>
+            {serviceName ? (
+                <div className="qpay-payment__booking-item qpay-payment__booking-service">
+                    <span className="qpay-payment__booking-icon" aria-hidden="true"><FiClipboard /></span>
+                    <span className="qpay-payment__booking-copy">
+                        <strong title={serviceName}>{serviceName}</strong>
+                        <span>Үйлчилгээ</span>
+                    </span>
+                </div>
+            ) : null}
             <div className="qpay-payment__date-row">
                 <span><FiCalendar aria-hidden="true" /> <span title={formatBookingDate(date)}>{formatBookingDate(date) || '—'}</span></span>
                 <span><FiClock aria-hidden="true" /> <span>{time || '—'}</span></span>
@@ -201,12 +213,12 @@ const InvoiceExpiry = ({ expiresAt }) => {
     const expiry = formatExpiry(expiresAt);
     if (!expiry) return null;
     return (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-            <span className="inline-flex items-center gap-1.5">
-                <FiClock className="h-4 w-4" aria-hidden="true" />
-                {expiry} хүртэл хүчинтэй
+        <div className="qpay-qr__expiry">
+            <span>
+                <FiClock aria-hidden="true" />
+                <span>Хүчинтэй: <time dateTime={expiresAt}>{expiry}</time></span>
             </span>
-            {remainingSeconds !== null ? <span className="font-semibold text-heading">Үлдсэн: {formatRemainingTime(remainingSeconds)}</span> : null}
+            {remainingSeconds !== null ? <span>Үлдсэн: {formatRemainingTime(remainingSeconds)}</span> : null}
         </div>
     );
 };
@@ -231,7 +243,7 @@ const PaymentStatusCard = ({ paymentState, isChecking, error, hideIdle = false }
             </div>
         );
     }
-    if (hideIdle && !isChecking) return null;
+    if (hideIdle || isChecking) return null;
     return (
         <div className="qpay-payment__status" role="status" aria-live="polite">
             <span className="qpay-payment__status-icon" aria-hidden="true"><FiRefreshCw className={isChecking ? 'animate-spin' : ''} /></span>
@@ -247,11 +259,13 @@ const CheckPaymentButton = ({ isChecking, onCheck, primary = false }) => (
         type="button"
         onClick={onCheck}
         disabled={isChecking}
+        aria-busy={isChecking || undefined}
+        aria-label={isChecking ? 'Төлбөрийн төлөв шалгаж байна' : 'Төлбөр шалгах'}
         className={`qpay-payment__check-button ${primary ? 'qpay-payment__check-button--primary' : ''}`}
     >
         <span className="inline-flex items-center justify-center gap-2">
             <FiRefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} aria-hidden="true" />
-            {isChecking ? 'Шалгаж байна...' : 'Төлбөр шалгах'}
+            Төлбөр шалгах
         </span>
     </button>
 );
@@ -271,7 +285,7 @@ const BankAppsPage = ({ urls, onBack, headingRef }) => (
     <div className="w-full min-w-0 max-w-full space-y-5 overflow-x-hidden">
         <PaymentHeader title="Банкны апп сонгох" onBack={onBack} headingRef={headingRef} />
         {urls.length > 0 ? (
-            <div className="grid w-full min-w-0 max-w-full gap-2 md:grid-cols-2">
+            <div className="grid w-full min-w-0 max-w-full gap-2.5 md:grid-cols-2">
                 {urls.map((item, index) => {
                     const href = isSafeBankLink(item?.link) ? item.link.trim() : '';
                     const originalName = String(item?.name || '').trim();
@@ -284,16 +298,16 @@ const BankAppsPage = ({ urls, onBack, headingRef }) => (
                             key={`${originalName || name}-${item?.link || index}`}
                             href={href || undefined}
                             aria-disabled={!href}
-                            className={`flex w-full min-h-[52px] min-w-0 max-w-full items-center gap-2.5 overflow-hidden rounded-panel border border-line bg-surface px-3 py-2 text-left shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-focus ${href ? 'hover:border-selected-border hover:bg-hover-surface active:scale-[0.99]' : 'cursor-not-allowed opacity-50'}`}
+                            className={`flex min-h-[64px] w-full min-w-0 max-w-full items-center gap-2.5 overflow-hidden rounded-panel border border-line bg-surface px-3 py-2.5 text-left shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-focus ${href ? 'hover:border-selected-border hover:bg-hover-surface active:scale-[0.99]' : 'cursor-not-allowed opacity-50'}`}
                         >
-                            {item?.logo ? <img src={item.logo} alt="" className="h-8 w-8 flex-shrink-0 rounded-lg object-contain" /> : (
-                                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-canvas text-muted"><FiCreditCard className="h-4 w-4" aria-hidden="true" /></span>
+                            {item?.logo ? <img src={item.logo} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" /> : (
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-canvas text-muted"><FiCreditCard className="h-4 w-4" aria-hidden="true" /></span>
                             )}
                             <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-semibold leading-4 text-ink" title={name}>{name}</span>
                                 {showDescription ? <span className="block truncate text-[11px] leading-4 text-muted" title={description}>{description}</span> : null}
                             </span>
-                            <FiExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-muted" aria-hidden="true" />
+                            <FiExternalLink className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />
                         </a>
                     );
                 })}
@@ -343,7 +357,7 @@ export default function QPayPaymentStep({
     }
 
     const summary = (
-        <CompactBookingSummary confirmation={confirmation} selectedClinic={selectedClinic} selectedBranch={selectedBranch} selectedDoctor={selectedDoctor} selectedTimeSlot={selectedTimeSlot} />
+        <CompactBookingSummary confirmation={confirmation} selectedClinic={selectedClinic} selectedBranch={selectedBranch} selectedDoctor={selectedDoctor} selectedService={selectedService} selectedTimeSlot={selectedTimeSlot} />
     );
 
     if (isPreparing) {
@@ -360,48 +374,91 @@ export default function QPayPaymentStep({
     }
 
     return (
-        <div className="qpay-payment" aria-label="Төлбөрийн сонголт">
+        <div className="qpay-payment qpay-payment--checkout" aria-label="Төлбөрийн сонголт">
             <PaymentHeader title="Захиаллага баталгаажуулах" onBack={onCancel} className="qpay-payment__header--left" />
-            <section className="qpay-payment__amount" aria-label="Төлөх дүн">
-                <h3 className="qpay-payment__section-title">Урьдчилгаа төлбөр</h3>
-                <div className="qpay-payment__amount-value">{amount || '—'}</div>
-                <div className="qpay-payment__total-row">
-                    <span>Үйлчилгээний нийт үнэ</span>
-                    <strong>{formatAmount(confirmation?.price ?? selectedService?.price, invoice?.currency) || '—'}</strong>
-                </div>
-            </section>
-            {summary}
-            {!isTerminalError ? (
-                <section className="qpay-payment__methods" aria-labelledby="qpay-payment-methods-title">
-                    <h3 id="qpay-payment-methods-title" className="qpay-payment__section-title">Төлбөрийн арга</h3>
-                    <div>
-                        <button ref={bankTriggerRef} type="button" onClick={onOpenBanks} disabled={paymentState === 'paidPendingConfirmation'} className="qpay-payment__method">
-                            <span className="qpay-payment__method-icon qpay-payment__method-icon--bank" aria-hidden="true"><FiCreditCard /></span>
-                            <span className="qpay-payment__method-copy"><strong>Банкны апп-аар төлөх</strong><span>Банкны апп сонгож үргэлжлүүлэх</span></span>
-                            <FiChevronRight className="qpay-payment__method-arrow" aria-hidden="true" />
-                        </button>
-                        <button type="button" onClick={onOpenQr} disabled={paymentState === 'paidPendingConfirmation'} className="qpay-payment__method">
-                            <span className="qpay-payment__method-icon qpay-payment__method-icon--qr" aria-hidden="true"><FiGrid /></span>
-                            <span className="qpay-payment__method-copy"><strong>QR-аар төлөх</strong><span>QR код уншуулж төлөх</span></span>
-                            <FiChevronRight className="qpay-payment__method-arrow" aria-hidden="true" />
-                        </button>
+            <div className="qpay-payment__layout">
+                <section className="qpay-payment__amount" aria-label="Төлөх дүн">
+                    <h3 className="qpay-payment__section-title">Урьдчилгаа төлбөр</h3>
+                    <div className="qpay-payment__amount-value">{amount || '—'}</div>
+                    <div className="qpay-payment__total-row">
+                        <span>Үйлчилгээний нийт үнэ</span>
+                        <strong>{formatAmount(confirmation?.price ?? selectedService?.price, invoice?.currency) || '—'}</strong>
                     </div>
                 </section>
-            ) : null}
-            <PaymentStatusCard paymentState={paymentState} isChecking={isChecking} error={error} hideIdle />
-            {!['confirmed', 'expired'].includes(paymentState) ? (
-                <div className="qpay-payment__actions">
-                    <CheckPaymentButton isChecking={isChecking} onCheck={onCheck} primary />
-                    <button type="button" onClick={onCancel} className="qpay-payment__cancel-button">Цуцлах</button>
+                {summary}
+                <div className="qpay-payment__controls">
+                    {!isTerminalError ? (
+                        <section className="qpay-payment__methods" aria-labelledby="qpay-payment-methods-title">
+                            <h3 id="qpay-payment-methods-title" className="qpay-payment__section-title">Төлбөрийн арга</h3>
+                            <div className="qpay-payment__method-list">
+                                <button ref={bankTriggerRef} type="button" onClick={onOpenBanks} disabled={paymentState === 'paidPendingConfirmation'} className="qpay-payment__method">
+                                    <span className="qpay-payment__method-icon qpay-payment__method-icon--bank" aria-hidden="true"><FiCreditCard /></span>
+                                    <span className="qpay-payment__method-copy"><strong>Банкны апп-аар төлөх</strong><span>Банкны апп сонгож үргэлжлүүлэх</span></span>
+                                    <FiChevronRight className="qpay-payment__method-arrow" aria-hidden="true" />
+                                </button>
+                                <button type="button" onClick={onOpenQr} disabled={paymentState === 'paidPendingConfirmation'} className="qpay-payment__method">
+                                    <span className="qpay-payment__method-icon qpay-payment__method-icon--qr" aria-hidden="true"><FiGrid /></span>
+                                    <span className="qpay-payment__method-copy"><strong>QR-аар төлөх</strong><span>QR код уншуулж төлөх</span></span>
+                                    <FiChevronRight className="qpay-payment__method-arrow" aria-hidden="true" />
+                                </button>
+                            </div>
+                        </section>
+                    ) : null}
+                    <PaymentStatusCard paymentState={paymentState} isChecking={isChecking} error={error} hideIdle />
+                    {!['confirmed', 'expired'].includes(paymentState) ? (
+                        <div className="qpay-payment__actions">
+                            <CheckPaymentButton isChecking={isChecking} onCheck={onCheck} primary />
+                            <button type="button" onClick={onCancel} className="qpay-payment__cancel-button">Цуцлах</button>
+                        </div>
+                    ) : null}
                 </div>
-            ) : null}
+            </div>
         </div>
     );
 }
 
-const PaymentPrompt = ({ id, title, description, onClose, children }) => {
+const PaymentPrompt = ({ id, title, description, onClose, children, variant = 'default', footer }) => {
     const panelRef = useRef(null);
+    const isQr = variant === 'qr';
     useEffect(() => {
+        if (isQr) {
+            const panel = panelRef.current;
+            const previousFocus = document.activeElement;
+            const focusable = () => Array.from(panel.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )).filter((element) => element.getClientRects().length > 0);
+            const focusFirst = () => (focusable()[0] || panel).focus({ preventScroll: true });
+            const handleQrKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    onClose();
+                } else if (event.key === 'Tab') {
+                    // Capture before the parent booking dialog's keyboard trap.
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    const items = focusable();
+                    const index = items.indexOf(document.activeElement);
+                    const next = index < 0 ? (event.shiftKey ? items.length - 1 : 0)
+                        : (index + (event.shiftKey ? -1 : 1) + items.length) % items.length;
+                    (items[next] || panel).focus({ preventScroll: true });
+                }
+            };
+            const handleFocus = (event) => {
+                if (!panel.contains(event.target)) focusFirst();
+            };
+            focusFirst();
+            document.addEventListener('keydown', handleQrKeyDown, true);
+            document.addEventListener('focusin', handleFocus, true);
+            return () => {
+                document.removeEventListener('keydown', handleQrKeyDown, true);
+                document.removeEventListener('focusin', handleFocus, true);
+                // Do not steal focus from a newly opened bank/success screen.
+                if (previousFocus?.isConnected && (panel.contains(document.activeElement) || document.activeElement === document.body)) {
+                    previousFocus.focus({ preventScroll: true });
+                }
+            };
+        }
         const handleKeyDown = (event) => {
             if (event.key !== 'Escape') return;
             event.preventDefault();
@@ -411,15 +468,30 @@ const PaymentPrompt = ({ id, title, description, onClose, children }) => {
         document.addEventListener('keydown', handleKeyDown);
         panelRef.current?.focus();
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
+    }, [isQr, onClose]);
+
+    if (isQr) {
+        return (
+            <div className="qpay-qr-overlay" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+                <Motion.section ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={description ? `${id}-description` : undefined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="qpay-qr">
+                    <header className="qpay-qr__header">
+                        <h3 id={`${id}-title`}>{title}</h3>
+                        <button type="button" onClick={onClose} className="qpay-qr__close" aria-label="QR цонхыг хаах"><FiX aria-hidden="true" /></button>
+                    </header>
+                    <div className="qpay-qr__content">{children}</div>
+                    <footer className="qpay-qr__footer">{footer}</footer>
+                </Motion.section>
+            </div>
+        );
+    }
 
     return (
         <div className="absolute inset-0 z-[60] flex items-end bg-black/45 backdrop-blur-[2px] sm:items-center sm:justify-center sm:p-6" onClick={onClose}>
             <Motion.section ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={description ? `${id}-description` : undefined} initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.98 }} className="max-h-[88vh] w-full overflow-y-auto rounded-t-[30px] border border-line-soft bg-surface px-5 pb-8 pt-4 shadow-modal outline-none sm:max-w-lg sm:rounded-panel sm:p-6" onClick={(event) => event.stopPropagation()}>
                 <button type="button" onClick={onClose} className="inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-sm font-semibold text-heading hover:bg-hover-surface focus:outline-none focus:ring-2 focus:ring-focus"><FiArrowLeft className="h-4 w-4" aria-hidden="true" />Буцах</button>
-                <h3 id={`${id}-title`} className="mt-3 text-title text-ink">{title}</h3>
-                {description ? <p id={`${id}-description`} className="mt-1 text-sm leading-5 text-muted">{description}</p> : null}
-                <div className="mt-5">{children}</div>
+                <h3 id={`${id}-title`} className="mt-3 text-xl font-semibold leading-tight text-ink sm:text-2xl">{title}</h3>
+                {description ? <p id={`${id}-description`} className="mt-3 text-sm leading-5 text-muted">{description}</p> : null}
+                <div className="mt-6">{children}</div>
             </Motion.section>
         </div>
     );
@@ -428,19 +500,39 @@ const PaymentPrompt = ({ id, title, description, onClose, children }) => {
 export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpenBanks, onClose }) => {
     const source = getQrImageSource(invoice?.qrImage);
     const amount = formatAmount(invoice?.amount, invoice?.currency);
+    const [failedSource, setFailedSource] = useState(null);
+    const isPaid = ['paidPendingConfirmation', 'confirmed'].includes(paymentState);
+    const isTerminal = ['expired', 'failed', 'createUnknown'].includes(paymentState);
+    const isCreating = paymentState === 'creating';
+    const isFeedback = isPaid || isTerminal || isCreating;
+    const hasQr = Boolean(source) && source !== failedSource && !isFeedback;
+    const missingQr = !hasQr && !isFeedback;
+    const description = isFeedback ? '' : 'Банкны апп-аар QR кодыг уншуулна уу.';
+    const footer = missingQr ? (
+        <button type="button" onClick={onOpenBanks} className="booking-cta-primary qpay-qr__alternative">Банкны апп-аар төлөх</button>
+    ) : paymentState === 'expired' || paymentState === 'confirmed' ? (
+        <button type="button" onClick={onClose} className="qpay-payment__cancel-button">Хаах</button>
+    ) : <CheckPaymentButton isChecking={isChecking || isCreating} onCheck={onCheck} primary />;
+
     return (
-        <PaymentPrompt id="qpay-qr" title="QR-аар төлөх" description="Банкны апп-аараа QR кодыг уншуулна уу." onClose={onClose}>
-            <div className="flex flex-col items-center text-center">
-                {source ? <img src={source} alt="QPay төлбөрийн QR" className="aspect-square w-full max-w-[280px] rounded-card border border-line bg-white object-contain p-3" /> : (
-                    <div className="w-full rounded-panel border border-danger bg-danger-surface p-4 text-left text-sm text-danger-text" role="alert"><div className="flex items-start gap-3"><FiAlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden="true" /><span>QR үүсгэх явцад алдаа гарлаа. Та өөр аргаар оролдоно уу.</span></div></div>
-                )}
-                {source && amount ? <div className="mt-4 text-title text-ink">{amount}</div> : null}
-                {source ? <InvoiceExpiry expiresAt={invoice?.invoiceExpiresAt} /> : null}
-                {source ? <div className="mt-4 w-full text-left"><PaymentStatusCard paymentState={paymentState} isChecking={isChecking} hideIdle /></div> : null}
-                {source ? <div className="mt-4 w-full"><CheckPaymentButton isChecking={isChecking} onCheck={onCheck} primary /></div> : (
-                    <button type="button" onClick={onOpenBanks} className="booking-cta-primary mt-4 min-h-12 w-full rounded-control px-4 py-3 font-semibold">Банкны апп-аар төлөх</button>
-                )}
-            </div>
+        <PaymentPrompt id="qpay-qr" title="QR-аар төлөх" description={description} onClose={onClose} variant="qr" footer={footer}>
+            {description ? <p id="qpay-qr-description" className="qpay-qr__instruction">{description}</p> : null}
+            <div className="qpay-qr__amount"><span>Урьдчилгаа төлбөр</span><strong>{amount || '—'}</strong></div>
+            {hasQr ? (
+                <div className="qpay-qr__image-frame">
+                    <img key={source} src={source} alt="QPay төлбөрийн QR" className="qpay-qr__image" onError={() => setFailedSource(source)} />
+                </div>
+            ) : (
+                <div className="qpay-qr__feedback">
+                    {isPaid || isTerminal ? <PaymentStatusCard paymentState={isPaid ? 'paidPendingConfirmation' : paymentState} /> : (
+                        <div className={missingQr ? 'qpay-qr__image-error' : 'qpay-qr__creating'} role={missingQr ? 'alert' : 'status'}>
+                            {missingQr ? <FiAlertCircle aria-hidden="true" /> : <FiRefreshCw aria-hidden="true" className="animate-spin" />}
+                            <p>{missingQr ? 'QR үүсгэх явцад алдаа гарлаа. Та өөр аргаар оролдоно уу.' : 'Төлбөрийн мэдээлэл бэлдэж байна.'}</p>
+                        </div>
+                    )}
+                </div>
+            )}
+            {!isFeedback ? <InvoiceExpiry expiresAt={invoice?.invoiceExpiresAt} /> : null}
         </PaymentPrompt>
     );
 };
@@ -448,8 +540,8 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
 export const QPayCancelPrompt = ({ onContinue, onConfirm }) => (
     <PaymentPrompt id="qpay-cancel" title="Төлбөрийн урсгалыг цуцлах уу?" description="Захиалга сервер дээр шууд цуцлагдахгүй, хүчинтэй хугацаа дуусахад автоматаар дуусна." onClose={onContinue}>
         <div className="grid gap-3 sm:grid-cols-2">
-            <button type="button" onClick={onContinue} className="booking-cta-primary min-h-12 rounded-control px-4 py-3 font-semibold">Үргэлжлүүлэн төлөх</button>
-            <button type="button" onClick={onConfirm} className="min-h-12 rounded-control border border-danger bg-surface px-4 py-3 font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus">Цуцлах</button>
+            <button type="button" onClick={onContinue} className="booking-cta-primary min-h-12 rounded-control px-4 py-2.5 text-sm leading-5 font-semibold">Үргэлжлүүлэн төлөх</button>
+            <button type="button" onClick={onConfirm} className="min-h-12 rounded-control border border-danger bg-surface px-4 py-2.5 text-sm leading-5 font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus">Цуцлах</button>
         </div>
     </PaymentPrompt>
 );

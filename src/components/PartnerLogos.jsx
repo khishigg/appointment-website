@@ -1,81 +1,12 @@
-import { Container } from "react-bootstrap";
-import { FiArrowRight } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiArrowRight, FiRefreshCw } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-const logoModules = import.meta.glob("../assets/logos/*.{png,jpg,jpeg,webp,svg}", {
-  eager: true,
-  import: "default",
-});
-
-const knownLogoMeta = {
-  "1787542192.jpg": { layout: "portrait" },
-  "1787542656.jpg": { layout: "square" },
-  "1787542686.jpg": { layout: "square" },
-  "1787542719.jpg": { layout: "landscape" },
-  "1787542735.jpg": { layout: "landscape", scale: 1.16 },
-  "1787542748.jpg": { layout: "landscape" },
-  "1787542760.jpg": { layout: "landscape" },
-  "1787542769.jpg": { layout: "square" },
-  "1787542781.jpg": { layout: "landscape" },
-  "1787542968.jpg": { layout: "square" },
-  "1787543202.jpg": { layout: "square" },
-  "1787543490.jpg": { layout: "square" },
-  "1787543632.jpg": { layout: "square" },
-  "1787544007.jpg": { layout: "square" },
-  "1787544645.jpg": { layout: "square" },
-  "1787544714.jpg": { layout: "landscape", scale: 1.12 },
-  "1787544833.jpg": { layout: "square" },
-  "1787544964.jpg": { layout: "square" },
-  "1787548344.jpg": { layout: "landscape", scale: 1.12 },
-  "global_greyscale.png": { alt: "Global", layout: "landscape" },
-  "gurvansor_greyscale.png": { alt: "Gurvan Sor", layout: "landscape" },
-  "niislel_greyscale (1).png": { alt: "Niislel", layout: "landscape" },
-  "niislel_greyscale.png": { alt: "Niislel", layout: "landscape" },
-  "premiumedited1.png": { alt: "Premium", layout: "landscape" },
-  "prodent-greyscale.png": { alt: "ProDent", layout: "landscape" },
-  "uranlombo-greyscale.png": { alt: "Uran Lombo", layout: "landscape" },
-};
-
-const getFileName = (path) => path.split("/").pop() || "";
-const isTimestampFile = (fileName) => /^\d+\.[^.]+$/.test(fileName);
-
-const partnerLogos = Object.entries(logoModules)
-  .map(([path, src]) => {
-    const fileName = getFileName(path);
-    const meta = knownLogoMeta[fileName] || {};
-
-    return {
-      id: path,
-      src,
-      fileName,
-      alt: meta.alt || "Эмнэлгийн лого",
-      layout: meta.layout,
-      scale: meta.scale || 1,
-    };
-  })
-  .filter((logo, index, logos) => logos.findIndex(({ src }) => src === logo.src) === index)
-  .sort((first, second) => {
-    const firstIsTimestamp = isTimestampFile(first.fileName);
-    const secondIsTimestamp = isTimestampFile(second.fileName);
-
-    if (firstIsTimestamp !== secondIsTimestamp) return Number(firstIsTimestamp) - Number(secondIsTimestamp);
-
-    return first.fileName.localeCompare(second.fileName);
-  });
-
-const createLogoRows = (rowCount) => {
-  const rows = Array.from({ length: rowCount }, () => []);
-
-  partnerLogos.forEach((logo, index) => {
-    rows[index % rows.length].push(logo);
-  });
-
-  return rows;
-};
-
-const desktopLogoRows = createLogoRows(3);
-const mobileLogoRows = createLogoRows(4);
-
+const MOBILE_ROW_COUNT = 4;
+const DESKTOP_ROW_COUNT = 3;
+const STATIC_LOGO_LIMIT = 3;
+const MOBILE_SLOT_STRIDE = 108;
+const DESKTOP_SLOT_STRIDE = 160;
 const rowDirections = ["left", "right", "left", "right"];
 
 const handleLogoLoad = (event) => {
@@ -94,31 +25,93 @@ const handleLogoLoad = (event) => {
       : "square";
 };
 
-const LogoRows = ({ rows, className }) => (
-  <div className={`partner-logo-rows ${className}`} aria-label="Бүртгэлтэй эмнэлгүүдийн лого">
+const normalizeClinicLogos = (clinics) => {
+  const seenUrls = new Set();
+
+  return clinics.reduce((logos, clinic, index) => {
+    const src = String(clinic?.logoUrl || "").trim();
+    if (!src || seenUrls.has(src)) return logos;
+
+    seenUrls.add(src);
+    const name = String(clinic?.name || "Эмнэлэг").trim() || "Эмнэлэг";
+    const id = clinic?.id ?? index;
+
+    logos.push({
+      id: `${id}:${src}`,
+      src,
+      alt: `${name} лого`,
+    });
+
+    return logos;
+  }, []);
+};
+
+const getAdaptiveRowCount = (logoCount, maxRows) => {
+  if (logoCount <= STATIC_LOGO_LIMIT) return 1;
+  return Math.min(maxRows, Math.ceil(logoCount / 3));
+};
+
+const fillLogoRow = (logos, targetCount) => {
+  if (logos.length === 0) return [];
+
+  const itemCount = Math.max(logos.length, targetCount);
+  return Array.from({ length: itemCount }, (_, index) => ({
+    logo: logos[index % logos.length],
+    instanceIndex: index,
+    decorative: index >= logos.length,
+  }));
+};
+
+const createLogoRows = (logos, maxRows, targetItemsPerRow, animated) => {
+  const rowCount = getAdaptiveRowCount(logos.length, maxRows);
+  const rows = Array.from({ length: rowCount }, () => []);
+
+  logos.forEach((logo, index) => {
+    rows[index % rowCount].push(logo);
+  });
+
+  return rows
+    .filter((row) => row.length > 0)
+    .map((row) => fillLogoRow(row, animated ? targetItemsPerRow : row.length));
+};
+
+const LogoRows = ({ rows, className, animated, onLogoError }) => (
+  <div
+    className={`partner-logo-rows ${animated ? "" : "partner-logo-rows--static"} ${className}`}
+    aria-label="Бүртгэлтэй эмнэлгүүдийн лого"
+  >
     {rows.map((logos, rowIndex) => {
       const direction = rowDirections[rowIndex];
+      const segments = animated ? [false, true] : [false];
 
       return (
-        <div key={direction + rowIndex} className={`partner-logo-row partner-logo-row--${direction}`}>
+        <div
+          key={`${direction}-${rowIndex}`}
+          className={`partner-logo-row ${animated ? `partner-logo-row--${direction}` : "partner-logo-row--static"}`}
+        >
           <div className="partner-logo-row__track">
-            {[false, true].map((isDuplicate) => (
+            {segments.map((isDuplicate) => (
               <ul
                 key={isDuplicate ? "duplicate" : "original"}
                 className="partner-logo-row__segment"
                 aria-hidden={isDuplicate || undefined}
               >
-                {logos.map((logo) => (
-                  <li key={`${logo.id}-${isDuplicate ? "duplicate" : "original"}`} className="partner-logo-card">
-                    <img
-                      src={logo.src}
-                      alt={isDuplicate ? "" : logo.alt}
-                      className="partner-logo-img"
-                      data-layout={logo.layout}
-                      style={{ "--partner-logo-scale": logo.scale }}
-                      loading="lazy"
-                      onLoad={handleLogoLoad}
-                    />
+                {logos.map(({ logo, instanceIndex, decorative }) => (
+                  <li
+                    key={`${logo.id}-${instanceIndex}-${isDuplicate ? "duplicate" : "original"}`}
+                    className="partner-logo-slot"
+                    aria-hidden={decorative || undefined}
+                  >
+                    <span className="partner-logo-slot__media">
+                      <img
+                        src={logo.src}
+                        alt={isDuplicate || decorative ? "" : logo.alt}
+                        className="partner-logo-img"
+                        loading="lazy"
+                        onLoad={handleLogoLoad}
+                        onError={() => onLogoError(logo.id)}
+                      />
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -130,10 +123,106 @@ const LogoRows = ({ rows, className }) => (
   </div>
 );
 
-export default function PartnerLogos() {
+const LogoLoadingState = () => (
+  <div className="partner-logo-loading" role="status" aria-live="polite">
+    <span className="sr-only">Эмнэлгүүдийн логог уншиж байна</span>
+    {Array.from({ length: 8 }, (_, index) => (
+      <span key={index} className="partner-logo-skeleton" aria-hidden="true" />
+    ))}
+  </div>
+);
+
+const LogoMessageState = ({ message, onRetry, isError = false }) => (
+  <div className="partner-logo-state" role={isError ? "alert" : "status"}>
+    <p>{message}</p>
+    {typeof onRetry === "function" ? (
+      <button type="button" onClick={onRetry} className="partner-logo-state__retry">
+        <FiRefreshCw aria-hidden="true" />
+        Дахин оролдох
+      </button>
+    ) : null}
+  </div>
+);
+
+export default function PartnerLogos({ clinicData }) {
+  const isLoading = clinicData?.isLoading === true;
+  const hasLoadError = Boolean(clinicData?.error || clinicData?.needsAuth);
+  const retry = clinicData?.retry;
+  const [failedLogoIds, setFailedLogoIds] = useState(() => new Set());
+  const [viewportWidth, setViewportWidth] = useState(() => (
+    typeof window === "undefined" ? 1280 : window.innerWidth
+  ));
+
+  useEffect(() => {
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", updateViewportWidth);
+    return () => window.removeEventListener("resize", updateViewportWidth);
+  }, []);
+
+  const apiLogos = useMemo(
+    () => normalizeClinicLogos(Array.isArray(clinicData?.clinics) ? clinicData.clinics : []),
+    [clinicData?.clinics]
+  );
+  const logos = useMemo(
+    () => apiLogos.filter((logo) => !failedLogoIds.has(logo.id)),
+    [apiLogos, failedLogoIds]
+  );
+  const animated = logos.length > STATIC_LOGO_LIMIT;
+  const mobileTargetCount = Math.ceil(Math.min(viewportWidth, 767) / MOBILE_SLOT_STRIDE) + 1;
+  const desktopTargetCount = Math.ceil(Math.min(Math.max(viewportWidth, 768), 1320) / DESKTOP_SLOT_STRIDE) + 1;
+  const mobileRows = useMemo(
+    () => createLogoRows(logos, MOBILE_ROW_COUNT, mobileTargetCount, animated),
+    [animated, logos, mobileTargetCount]
+  );
+  const desktopRows = useMemo(
+    () => createLogoRows(logos, DESKTOP_ROW_COUNT, desktopTargetCount, animated),
+    [animated, desktopTargetCount, logos]
+  );
+
+  const handleLogoError = (logoId) => {
+    setFailedLogoIds((current) => {
+      if (current.has(logoId)) return current;
+      const next = new Set(current);
+      next.add(logoId);
+      return next;
+    });
+  };
+
+  let logoContent;
+  if (isLoading) {
+    logoContent = <LogoLoadingState />;
+  } else if (hasLoadError) {
+    logoContent = (
+      <LogoMessageState
+        message="Эмнэлгүүдийн мэдээллийг ачаалж чадсангүй."
+        onRetry={retry}
+        isError
+      />
+    );
+  } else if (logos.length === 0) {
+    logoContent = <LogoMessageState message="Одоогоор харуулах эмнэлгийн лого алга." />;
+  } else {
+    logoContent = (
+      <>
+        <LogoRows
+          rows={desktopRows}
+          className="partner-logo-rows--desktop"
+          animated={animated}
+          onLogoError={handleLogoError}
+        />
+        <LogoRows
+          rows={mobileRows}
+          className="partner-logo-rows--mobile"
+          animated={animated}
+          onLogoError={handleLogoError}
+        />
+      </>
+    );
+  }
+
   return (
     <section className="partner-logos-section" aria-labelledby="partner-logos-title">
-      <Container className="partner-logos-section__container">
+      <div className="page-container partner-logos-section__container">
         <header className="partner-logos-header">
           <h2 id="partner-logos-title">Манай программд бүртгэлтэй эмнэлгүүд</h2>
           <p className="partner-logos-header__description">
@@ -146,9 +235,8 @@ export default function PartnerLogos() {
           </Link>
         </header>
 
-        <LogoRows rows={desktopLogoRows} className="partner-logo-rows--desktop" />
-        <LogoRows rows={mobileLogoRows} className="partner-logo-rows--mobile" />
-      </Container>
+        {logoContent}
+      </div>
     </section>
   );
 }

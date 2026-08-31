@@ -1,4 +1,3 @@
-import { Container, Row, Col } from "react-bootstrap";
 import { motion } from "framer-motion";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
@@ -12,9 +11,9 @@ const doctors = [
 
 export default function ExpertsSection() {
   return (
-    <section className="py-6 bg-white">
-      <Container>
-        <div className="text-center mb-5">
+    <section className="py-12 bg-white">
+      <div className="page-container">
+        <div className="text-center mb-12">
           <motion.h2
             className="text-h2 mb-2"
             initial={{ opacity: 0, y: 15 }}
@@ -34,9 +33,9 @@ export default function ExpertsSection() {
           </motion.p>
         </div>
 
-        <Row className="gy-4 justify-content-center">
+        <div className="-mx-3 flex flex-wrap justify-center gap-y-6">
           {doctors.map((doc, i) => (
-            <Col lg={4} md={6} sm={10} key={doc.id}>
+            <div className="w-full min-w-0 px-3 min-[576px]:w-10/12 md:w-1/2 min-[992px]:w-1/3" key={doc.id}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -44,24 +43,24 @@ export default function ExpertsSection() {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 whileHover={{ y: -8 }}
               >
-                <Card variant="default" className="h-100 d-flex flex-column text-center p-4">
+                <Card variant="default" className="h-full flex flex-col text-center p-6">
                   {/* 📷 Doctor Portrait */}
-                  <div className="position-relative d-inline-block mx-auto mb-3">
+                  <div className="relative inline-block mx-auto mb-4">
                     <img
                       src={doc.img}
                       alt={doc.name}
-                      className="rounded-circle shadow-sm"
+                      className="rounded-full shadow-sm"
                       style={{ width: 100, height: 100, objectFit: "cover", border: '3px solid var(--primary-50)' }}
                     />
-                    <div className="position-absolute bottom-0 end-0 bg-success-500 border border-white rounded-circle" style={{ width: 14, height: 14 }} title="Online"></div>
+                    <div className="absolute bottom-0 end-0 bg-success-500 border border-white rounded-full" style={{ width: 14, height: 14 }} title="Online"></div>
                   </div>
 
                   {/* 📝 Doctor Info */}
-                  <div className="mb-3">
+                  <div className="mb-4">
                     <h3 className="text-h3 mb-1">{doc.name}</h3>
                     <p className="text-legacy-body-sm text-gray-500 mb-2">{doc.spec}</p>
 
-                    <div className="d-flex justify-content-center align-items-center gap-2">
+                    <div className="flex justify-center items-center gap-2">
                       <Badge variant="primary" size="sm">
                         <span className="text-warning-500 me-1">★</span> {doc.rating} ({doc.reviews})
                       </Badge>
@@ -69,31 +68,31 @@ export default function ExpertsSection() {
                   </div>
 
                   {/* ⏰ Availability */}
-                  <div className="mt-auto pt-4 border-top border-gray-100 mb-4">
-                    <div className="d-flex justify-content-between align-items-center">
+                  <div className="mt-auto pt-6 border-t border-gray-100 mb-6">
+                    <div className="flex justify-between items-center">
                       <div className="text-start">
-                        <span className="text-body-xs d-block text-gray-400">Боломжит цаг:</span>
-                        <span className="text-legacy-body-sm fw-bold text-navy-900">{doc.time}</span>
+                        <span className="text-body-xs block text-gray-400">Боломжит цаг:</span>
+                        <span className="text-legacy-body-sm font-bold text-navy-900">{doc.time}</span>
                       </div>
                       <Badge variant="success" size="sm">Нээлттэй</Badge>
                     </div>
                   </div>
 
-                  <Button variant="primary" size="md" className="w-100">
+                  <Button variant="primary" size="md" className="w-full">
                     Цаг захиалах
                   </Button>
                 </Card>
               </motion.div>
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
 
-        <div className="text-center mt-5">
+        <div className="text-center mt-12">
           <Button variant="outline" size="lg">
             Бүх эмчийг харах
           </Button>
         </div>
-      </Container>
+      </div>
     </section>
   );
 }

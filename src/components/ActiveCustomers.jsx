@@ -10,9 +10,9 @@ const ActiveCustomers = () => {
   ];
 
   return (
-    <section className="active-customers-section py-6 bg-gray-25">
-      <div className="container text-center">
-        <h3 className="text-h3 mb-5">
+    <section className="active-customers-section py-12 bg-gray-25">
+      <div className="page-container text-center">
+        <h3 className="text-h3 mb-12">
           Хамтран ажиллаж буй эмнэлгүүд
         </h3>
         <div className="logo-slider">

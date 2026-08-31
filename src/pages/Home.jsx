@@ -11,7 +11,7 @@ export default function Home() {
     <>
       <Hero clinicData={clinicData} />
       <RecommendedClinics clinicData={clinicData} />
-      <PartnerLogos />
+      <PartnerLogos clinicData={clinicData} />
     </>
   );
 }

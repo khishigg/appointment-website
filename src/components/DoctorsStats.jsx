@@ -1,13 +1,12 @@
 // src/components/DoctorsStatsV2.jsx
-import { Container } from "react-bootstrap";
 import CountUp from "react-countup";
 import { motion } from "framer-motion";
 
 export default function DoctorsStats() {
   return (
-    <Container className="py-5 text-center">
+    <div className="page-container py-12 text-center">
       <motion.div
-        className="hp-glass rounded-4 py-5 px-3"
+        className="hp-glass rounded-panel py-12 px-4"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.4 }}
@@ -20,6 +19,6 @@ export default function DoctorsStats() {
         </h3>
         <p className="text-legacy-body text-gray-500 mb-0">Live data update-тайгаар итгэлийг нэмэгдүүлнэ.</p>
       </motion.div>
-    </Container>
+    </div>
   );
 }

@@ -41,7 +41,7 @@ const BranchLocationCard = ({
 
             {item.address ? (
                 <div className="mt-3 flex items-start gap-2 text-caption leading-5 text-muted">
-                    <FiMapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-faint" />
+                    <FiMapPin className="mt-0.5 h-4 w-4 shrink-0 text-faint" />
                     <span>{item.address}</span>
                 </div>
             ) : null}

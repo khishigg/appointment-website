@@ -1,4 +1,4 @@
-import React from 'react';
+import { useId } from 'react';
 
 /**
  * Standardized Input component with label and error state support.
@@ -13,36 +13,43 @@ export default function Input({
     leftIcon,
     className = '',
     containerClassName = '',
+    id,
     ...props
 }) {
+    const generatedId = useId();
+    const inputId = id || generatedId;
+    const errorId = `${inputId}-error`;
     return (
-        <div className={`d-flex flex-column gap-1 ${containerClassName}`}>
+        <div className={`flex flex-col gap-1 ${containerClassName}`}>
             {label && (
-                <label className="fs-body-sm fw-medium text-gray-700 ms-1">
+                <label htmlFor={inputId} className="text-sm font-medium text-heading ms-1">
                     {label}
                 </label>
             )}
 
-            <div className="position-relative d-flex align-items-center">
+            <div className="relative flex items-center">
                 {leftIcon && (
-                    <div className="position-absolute start-0 ms-3 text-gray-400">
+                    <div className="pointer-events-none absolute start-3 text-muted" aria-hidden="true">
                         {leftIcon}
                     </div>
                 )}
 
                 <input
                     className={`
-            w-100 fs-body py-2 px-3 rounded-md border transition-all outline-none
-            ${leftIcon ? 'ps-5' : 'ps-3'}
-            ${error ? 'border-error-500 focus:shadow-[0_0_0_4px_rgba(240,68,56,0.1)]' : 'border-gray-200 focus:border-primary-500 focus:shadow-[0_0_0_4px_rgba(0,102,255,0.1)]'}
+            w-full min-h-12 text-base leading-6 py-2 px-3 rounded-control border bg-surface text-ink transition-colors outline-none focus:shadow-focus disabled:opacity-50
+            ${leftIcon ? 'ps-10' : 'ps-3'}
+            ${error ? 'border-danger' : 'border-line focus:border-[var(--primary-600)]'}
             ${className}
           `}
                     {...props}
+                    id={inputId}
+                    aria-invalid={error ? true : props['aria-invalid']}
+                    aria-describedby={[props['aria-describedby'], error ? errorId : null].filter(Boolean).join(' ') || undefined}
                 />
             </div>
 
             {error && (
-                <span className="fs-body-xs text-error-500 ms-1 mt-0-5">
+                <span id={errorId} className="text-xs text-danger-text ms-1 mt-0.5">
                     {error}
                 </span>
             )}

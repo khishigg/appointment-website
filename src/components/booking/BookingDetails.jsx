@@ -908,6 +908,7 @@ export default function BookingDetails({
         <ResponsiveSheet
             mode={mode}
             open={isBookingDetailsOpen}
+            focusTrapPaused={isRegistrationPromptOpen || isEmailOtpPromptOpen || isPasswordSetupPromptOpen}
             onClose={handleBack}
             // Илгээж байх үед болон баталгаажилтын дэлгэц дээр санамсаргүй хаалтаас хамгаална
             dismissible={!isRegistrationPromptOpen && !isEmailOtpPromptOpen && !isPasswordSetupPromptOpen && step < 3 && !isSubmitting && !isVerifyingOtp && !isSettingPassword}
@@ -958,6 +959,7 @@ export default function BookingDetails({
                 onDeclineRegistration={handleDeclineRegistration}
                 onDismissRegistration={handleDismissRegistrationPrompt}
                 isRegistrationBackdropDismissible={layout === 'mobile'}
+                isIdentityPromptDesktop={layout === 'desktop'}
                 onBackToRegistrationPrompt={handleBackToRegistrationPrompt}
                 onPasswordChange={setPassword}
                 onConfirmPasswordChange={setConfirmPassword}

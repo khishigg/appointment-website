@@ -85,7 +85,7 @@ export default function BookingStepContent({
                         <p className="text-sm text-muted">Бүртгэлтэй үйлчилгээ олдсонгүй.</p>
                     ) : (
 
-                        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-3" role="radiogroup" aria-label="Үйлчилгээ сонгох">
+                        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3" role="radiogroup" aria-label="Үйлчилгээ сонгох">
                             {services.map((service) => (
                                 <ServiceCard
                                     key={service.id}

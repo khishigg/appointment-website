@@ -15,7 +15,7 @@ const ContactRow = ({ icon: Icon, label, value, href }) => {
 
     return (
         <div className="flex items-start gap-3">
-            <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-faint" aria-hidden="true" />
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
             <div className="min-w-0">
                 <p className="text-label font-semibold uppercase tracking-wide text-muted">{label}</p>
                 {href ? (

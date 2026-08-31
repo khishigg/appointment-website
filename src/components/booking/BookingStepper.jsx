@@ -30,7 +30,7 @@ export default function BookingStepper({ step = 1 }) {
                             aria-current={isActive ? 'step' : undefined}
                         >
                             <span
-                                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-pill border text-label transition-colors lg:h-5 lg:w-5 ${
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-pill border text-label transition-colors lg:h-5 lg:w-5 ${
                                     isDone || isActive
                                         ? 'booking-selection-active'
                                         : 'border-line bg-surface text-muted'

@@ -13,7 +13,7 @@ const floatAnimation = (delay) => ({
 
 const WidgetCard = ({ icon: Icon, title, value, colorClass, style, delay }) => (
     <motion.div
-        className="position-absolute d-none d-lg-flex align-items-center gap-3 bg-white shadow-sm pe-4 ps-3 py-2 rounded-pill"
+        className="absolute hidden min-[992px]:flex items-center gap-4 bg-white shadow-sm pe-6 ps-4 py-2 rounded-pill"
         animate={floatAnimation(delay)}
         style={{
             zIndex: 10,
@@ -22,13 +22,13 @@ const WidgetCard = ({ icon: Icon, title, value, colorClass, style, delay }) => (
         }}
     >
         <div
-            className={`d-flex align-items-center justify-content-center rounded-circle ${colorClass}`}
+            className={`flex items-center justify-center rounded-full ${colorClass}`}
             style={{ width: 40, height: 40, background: 'var(--gray-50)' }}
         >
             <Icon size={18} />
         </div>
-        <div className="d-flex flex-column text-start" style={{ lineHeight: 1.2 }}>
-            <span className="fw-bold text-gray-900" style={{ fontSize: '0.9rem' }}>{value}</span>
+        <div className="flex flex-col text-start" style={{ lineHeight: 1.2 }}>
+            <span className="font-bold text-gray-900" style={{ fontSize: '0.9rem' }}>{value}</span>
             <span className="text-gray-400" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{title}</span>
         </div>
     </motion.div>

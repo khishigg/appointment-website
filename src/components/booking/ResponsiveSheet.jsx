@@ -49,6 +49,7 @@ export default function ResponsiveSheet({
     open = false,
     onClose,
     dismissible = true,
+    focusTrapPaused = false,
     label,
     className = '',
     children,
@@ -62,12 +63,14 @@ export default function ResponsiveSheet({
         onClose,
         containerRef: panelRef,
         dismissible,
+        focusTrapPaused,
     });
 
     // Desktop: overlay биш — энгийн бүсэд суусан панель.
     if (isInline) {
         return (
             <section
+                inert={focusTrapPaused}
                 aria-label={label}
                 className={`flex h-full flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-card ${className}`}
             >
@@ -99,6 +102,7 @@ export default function ResponsiveSheet({
                     >
                         <Motion.div
                             ref={panelRef}
+                            inert={focusTrapPaused}
                             tabIndex={-1}
                             role="dialog"
                             aria-modal="true"

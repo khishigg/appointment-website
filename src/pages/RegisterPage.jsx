@@ -101,7 +101,7 @@ export default function RegisterPage() {
             {/* Овог */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Овог <span className="text-danger">*</span>
+                Овог <span className="text-danger-text">*</span>
               </label>
               <input
                 type="text"
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             {/* Нэр */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Нэр <span className="text-danger">*</span>
+                Нэр <span className="text-danger-text">*</span>
               </label>
               <input
                 type="text"
@@ -133,7 +133,7 @@ export default function RegisterPage() {
             {/* Утасны дугаар */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Утасны дугаар <span className="text-danger">*</span>
+                Утасны дугаар <span className="text-danger-text">*</span>
               </label>
               <input
                 type="tel"
@@ -149,7 +149,7 @@ export default function RegisterPage() {
             {/* Имэйл */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Имэйл / Gmail <span className="text-danger">*</span>
+                Имэйл / Gmail <span className="text-danger-text">*</span>
               </label>
               <input
                 type="email"
@@ -165,7 +165,7 @@ export default function RegisterPage() {
             {/* Нууц үг */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Нууц үг <span className="text-danger">*</span>
+                Нууц үг <span className="text-danger-text">*</span>
               </label>
               <div className="relative">
                 <input
@@ -191,7 +191,7 @@ export default function RegisterPage() {
             {/* Нууц үг баталгаажуулах */}
             <div>
               <label className="block text-sm font-medium text-heading mb-1.5">
-                Нууц үг баталгаажуулах <span className="text-danger">*</span>
+                Нууц үг баталгаажуулах <span className="text-danger-text">*</span>
               </label>
               <div className="relative">
                 <input
@@ -233,7 +233,7 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-3.5 rounded-control bg-green-50 border border-green-200 text-green-700 text-sm font-medium flex items-center gap-2"
               >
-                <CheckCircle2 size={18} className="text-green-600 flex-shrink-0" />
+                <CheckCircle2 size={18} className="text-green-600 shrink-0" />
                 <span>{success}</span>
               </Motion.div>
             )}

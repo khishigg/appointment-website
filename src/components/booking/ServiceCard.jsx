@@ -61,7 +61,7 @@ export default function ServiceCard({
                 // Select горим: header нь энгийн мөр; chevron нь тусдаа товч.
                 <div className="flex w-full items-center justify-between gap-3 text-left">
                     {header}
-                    <span className="flex flex-shrink-0 items-center gap-2">
+                    <span className="flex shrink-0 items-center gap-2">
                         {selected ? (
                             <span
                                 className="booking-selection-active flex h-5 w-5 items-center justify-center rounded-full"
@@ -100,7 +100,7 @@ export default function ServiceCard({
                     {header}
                     {hasDescription ? (
                         <FiChevronDown
-                            className={`h-4 w-4 flex-shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`}
+                            className={`h-4 w-4 shrink-0 text-faint transition-transform ${expanded ? 'rotate-180' : ''}`}
                             aria-hidden="true"
                         />
                     ) : null}

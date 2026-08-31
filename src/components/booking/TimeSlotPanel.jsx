@@ -270,7 +270,7 @@ export default function TimeSlotPanel({
         <>
             {/* Өдрийн хэвтээ навигаци */}
             <div className="sticky top-0 z-30 border-b border-line-soft bg-surface px-2 py-2">
-                <div className="flex gap-2 overflow-x-auto max-md:no-scrollbar">
+                <div className="no-scrollbar flex gap-2 overflow-x-auto">
                     {visibleAvailabilityData.map((section, idx) => {
                         const monthMatch = section.day.match(/(\d+)-р сарын (\d+)/);
                         let shortLabel = monthMatch
@@ -291,7 +291,7 @@ export default function TimeSlotPanel({
                                 type="button"
                                 onClick={() => scrollToDate(section.day)}
                                 className={`
-                                    whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all
+                                    whitespace-nowrap rounded-none px-4 py-2 text-sm font-medium transition-all
                                     ${section.noAppts
                                         ? 'bg-canvas text-faint'
                                         : 'border border-selected-border bg-surface text-ink hover:bg-hover-surface active:scale-95'}
@@ -432,9 +432,9 @@ function TimeButton({ slot, day, apiDate, isSelected, onSelectSlot }) {
             type="button"
             onClick={handleClick}
             className={`
-                rounded-lg py-2 text-body font-semibold transition-all duration-300
+                rounded-none py-2 text-body font-semibold transition-all duration-300
                 ${isSelected
-                    ? 'booking-selection-active z-10 scale-[1.05] shadow-lg'
+                    ? 'booking-selection-active z-10 shadow-md'
                     : 'border border-black/5 bg-availability text-ink shadow-sm hover:bg-availability-hover active:scale-95'}
             `}
         >

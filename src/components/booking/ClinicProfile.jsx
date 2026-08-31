@@ -37,7 +37,7 @@ const tabs = [
 // Header-ийн баруун талын нэг мэдээллийн бүлэг: icon + доор нь мөрүүд.
 const MetaGroup = ({ icon: Icon, children }) => (
     <div className="flex items-start gap-2">
-        <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-faint" aria-hidden="true" />
+        <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-faint" aria-hidden="true" />
         <div className="min-w-0 text-[11px] leading-snug text-muted">{children}</div>
     </div>
 );
@@ -76,7 +76,7 @@ export default function ClinicProfile({
             <div className="mx-auto max-w-[1280px] px-4 pt-4 pb-3 md:px-6 lg:flex lg:items-start lg:justify-between lg:gap-8">
                 <div className="flex items-center gap-3">
           
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                         {shouldShowLogo ? (
                             <img
                                 src={logoSrc}
@@ -97,7 +97,7 @@ export default function ClinicProfile({
                 </div>
 
                 {hasContact || hoursRows.length > 0 ? (
-                    <div className="hidden lg:-mt-1.5 lg:flex lg:flex-shrink-0 lg:items-start lg:gap-8">
+                    <div className="hidden lg:-mt-1.5 lg:flex lg:shrink-0 lg:items-start lg:gap-8">
                         {displayClinic.address ? (
                             <MetaGroup icon={FiMapPin}>
                                 <p className="max-w-[240px]">{displayClinic.address}</p>
@@ -111,9 +111,9 @@ export default function ClinicProfile({
                                     <div key={`${row.label}-${index}`} className="flex items-center gap-1.5">
                                         {/* Icon зөвхөн эхний мөрөнд; дараагийнх нь ижил өргөнөөр эгнэнэ. */}
                                         {index === 0 ? (
-                                            <FiClock className="h-3 w-3 flex-shrink-0 text-faint" aria-hidden="true" />
+                                            <FiClock className="h-3 w-3 shrink-0 text-faint" aria-hidden="true" />
                                         ) : (
-                                            <span className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                                            <span className="h-3 w-3 shrink-0" aria-hidden="true" />
                                         )}
                                         <span className="whitespace-nowrap">
                                             {row.label ? `${row.label}: ` : ''}{row.hours}
@@ -123,14 +123,14 @@ export default function ClinicProfile({
 
                                 {telHref ? (
                                     <a href={telHref} className="flex items-center gap-1.5 hover:text-ink">
-                                        <FiPhone className="h-3 w-3 flex-shrink-0 text-faint" aria-hidden="true" />
+                                        <FiPhone className="h-3 w-3 shrink-0 text-faint" aria-hidden="true" />
                                         {displayClinic.phoneNumber}
                                     </a>
                                 ) : null}
 
                                 {mailHref ? (
                                     <a href={mailHref} className="flex items-center gap-1.5 hover:text-ink">
-                                        <FiMail className="h-3 w-3 flex-shrink-0 text-faint" aria-hidden="true" />
+                                        <FiMail className="h-3 w-3 shrink-0 text-faint" aria-hidden="true" />
                                         {displayClinic.email}
                                     </a>
                                 ) : null}

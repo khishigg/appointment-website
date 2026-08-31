@@ -233,7 +233,7 @@ const MobileSearchOverlay = ({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="position-absolute end-0 top-100 mt-2 w-100 px-5"
+              className="absolute end-0 top-100 mt-2 w-full px-5"
               style={{ zIndex: 120, right: 0 }}
             >
               <div
@@ -250,7 +250,7 @@ const MobileSearchOverlay = ({
                         setShowAimagDropdown(false);
                       }}
                       className={`text-left px-3 py-2.5 rounded-xl text-[14px] transition-colors ${selectedAimag === aimag
-                        ? 'bg-primary text-white fw-bold shadow-sm'
+                        ? 'bg-primary text-white font-bold shadow-sm'
                         : 'text-gray-600 hover:bg-gray-50'
                         }`}
                     >
@@ -422,7 +422,7 @@ const PremiumSearchOverlay = ({
 
           {/* 📍 Location Filter Chips (Desktop Version) */}
           {showFilters && (
-            <Motion.div variants={itemVariants} className="d-flex gap-1 mb-4">
+            <Motion.div variants={itemVariants} className="flex gap-1 mb-4">
               {[
                 { id: 'all', label: 'Бүгд' },
                 { id: 'city', label: 'Улаанбаатар' },
@@ -556,10 +556,10 @@ export default function SearchBar({ clinicData, clinicTypeRequest }) {
   return (
     <>
       <div className={`search-island-wrapper`}>
-        <div className="search-inner-wrapper d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-0">
+        <div className="search-inner-wrapper flex flex-col md:flex-row items-stretch md:items-center gap-0">
 
           {/* 🔍 Search Input Wrapper (50%) */}
-          <div className="search-input-section flex-grow-1">
+          <div className="search-input-section grow">
             <Input
               placeholder="Эмнэлгийн нэрээр хайх"
               value={query}
@@ -573,36 +573,36 @@ export default function SearchBar({ clinicData, clinicTypeRequest }) {
               }}
               readOnly // Always open overlay for unified feel
               className="search-main-input border-0 shadow-none ps-0 cursor-pointer"
-              containerClassName="mb-0 w-100"
+              containerClassName="mb-0 w-full"
               style={{ fontSize: "1rem" }}
             />
           </div>
 
           {/* 📏 Divider */}
-          <div className="d-none d-md-block" style={{ height: '30px', width: '1px', background: 'rgba(0,0,0,0.08)', margin: '0 1.5rem' }}></div>
+          <div className="hidden md:block" style={{ height: '30px', width: '1px', background: 'rgba(0,0,0,0.08)', margin: '0 1.5rem' }}></div>
 
           {/* 📍 Location Input Sub-Island (50%) */}
-          <div className="location-section flex-grow-1 d-flex align-items-center">
-            <div className="location-sub-island d-flex align-items-center w-100">
+          <div className="location-section grow flex items-center">
+            <div className="location-sub-island flex items-center w-full">
               <Input
                 placeholder="Газрын зургаар хайх"
                 value=""
                 onClick={openMapModal}
                 readOnly
                 className="location-inner-input border-0 shadow-none cursor-pointer hover:bg-gray-50 transition-colors"
-                containerClassName="mb-0 w-100"
+                containerClassName="mb-0 w-full"
                 style={{ fontSize: "1rem" }}
               />
             </div>
           </div>
 
           <button
-            className="search-btn-primary ms-md-2"
+            className="search-btn-primary md:ms-2"
             onClick={handleSearch}
             aria-label="Search"
           >
             <FiSearch size={18} className="search-btn-icon " />
-            <span className="d-md-none fw-bold">Хайх</span>
+            <span className="md:hidden font-bold">Хайх</span>
           </button>
         </div>
       </div>

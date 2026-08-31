@@ -13,26 +13,27 @@ export default function Button({
     variant = 'primary',
     size = 'md',
     loading = false,
+    disabled = false,
     className = '',
     leftIcon,
     rightIcon,
     children,
     ...props
 }) {
-    const baseClasses = 'inline-flex align-items-center justify-content-center fw-bold rounded-pill transition-all cursor-pointer border-0';
+    const baseClasses = 'inline-flex items-center justify-center gap-2 border font-semibold rounded-pill transition-colors focus-visible:outline-none focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-50';
 
     const variants = {
-        primary: 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm',
-        secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-        outline: 'bg-transparent border-2 border-primary-500 text-primary-500 hover:bg-primary-50',
-        ghost: 'bg-transparent text-gray-600 hover:bg-gray-100',
-        danger: 'bg-error-500 text-white hover:bg-error-600',
+        primary: 'bg-[var(--primary-500)] border-[var(--primary-600)] text-ink enabled:hover:bg-[var(--primary-600)] shadow-xs',
+        secondary: 'bg-canvas border-line text-heading enabled:hover:bg-disabled-bg',
+        outline: 'bg-transparent border-[var(--primary-600)] text-ink enabled:hover:bg-[var(--primary-200)]',
+        ghost: 'bg-transparent border-transparent text-muted enabled:hover:bg-hover-surface',
+        danger: 'bg-danger-text border-danger-text text-surface enabled:hover:bg-danger',
     };
 
     const sizes = {
-        sm: 'px-3 py-1-5 fs-body-xs',
-        md: 'px-4 py-2 fs-body-sm',
-        lg: 'px-6 py-3 fs-body',
+        sm: 'min-h-11 px-3 py-1.5 text-xs leading-5',
+        md: 'min-h-12 px-4 py-2 text-sm leading-5',
+        lg: 'min-h-12 px-6 py-3 text-base leading-6',
     };
 
     const selectedVariant = variants[variant] || variants.primary;
@@ -41,15 +42,16 @@ export default function Button({
     return (
         <button
             className={`${baseClasses} ${selectedVariant} ${selectedSize} ${className} ${loading ? 'opacity-70 pointer-events-none' : ''}`}
-            disabled={loading}
             {...props}
+            disabled={disabled || loading}
+            aria-busy={loading || undefined}
         >
             {loading && (
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" aria-hidden="true" />
             )}
-            {!loading && leftIcon && <span className="me-2">{leftIcon}</span>}
+            {!loading && leftIcon && <span aria-hidden="true">{leftIcon}</span>}
             {children}
-            {!loading && rightIcon && <span className="ms-2">{rightIcon}</span>}
+            {!loading && rightIcon && <span aria-hidden="true">{rightIcon}</span>}
         </button>
     );
 }

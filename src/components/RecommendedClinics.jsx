@@ -96,10 +96,10 @@ export default function RecommendedClinics({ clinicData }) {
 
     return (
         <section className="recommended-clinics" aria-labelledby="recommended-clinics-title">
-            <div className="container">
+            <div className="page-container">
                 <div className="recommended-clinics__heading">
                     <div>
-                        <h3 id="recommended-clinics-title">Онцлох эмнэлгүүд</h3>
+                        <h2 id="recommended-clinics-title">Онцлох эмнэлгүүд</h2>
                     </div>
                 </div>
 

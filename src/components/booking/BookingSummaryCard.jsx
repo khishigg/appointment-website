@@ -45,7 +45,7 @@ const SummarySection = ({ label, value, trailing, hint }) => {
                     {value}
                 </div>
                 {trailing ? (
-                    <div className="flex-shrink-0 text-body font-semibold leading-tight text-ink">
+                    <div className="shrink-0 text-body font-semibold leading-tight text-ink">
                         {trailing}
                     </div>
                 ) : null}
@@ -113,7 +113,7 @@ export default function BookingSummaryCard({
                         src={genericDoctorImage}
                         alt=""
                         aria-hidden="true"
-                        className="h-11 w-11 flex-shrink-0 rounded-pill border border-line object-cover lg:h-9 lg:w-9"
+                        className="h-11 w-11 shrink-0 rounded-pill border border-line object-cover lg:h-9 lg:w-9"
                     />
                     {/* Текстийн блок avatar-ын өндөртэй (36px) тэнцүү */}
                     <div className="min-w-0">

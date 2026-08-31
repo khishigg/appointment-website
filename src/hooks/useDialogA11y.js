@@ -24,6 +24,7 @@ export default function useDialogA11y({
     onClose,
     containerRef,
     dismissible = true,
+    focusTrapPaused = false,
 }) {
     const previouslyFocused = useRef(null);
     const active = enabled && open;
@@ -59,17 +60,23 @@ export default function useDialogA11y({
         if (!active) return undefined;
 
         previouslyFocused.current = document.activeElement;
-        const node = containerRef.current;
-        node?.focus?.();
 
         return () => {
             previouslyFocused.current?.focus?.();
         };
     }, [active, containerRef]);
 
+    // A nested identity dialog owns focus while open. Keep the parent's
+    // scroll lock and external focus restoration alive during that time.
+    useEffect(() => {
+        if (!active || focusTrapPaused) return;
+        const node = containerRef.current;
+        if (node && !node.contains(document.activeElement)) node.focus();
+    }, [active, containerRef, focusTrapPaused]);
+
     // Focus trap — Tab нь панелийн дотор эргэлдэнэ
     useEffect(() => {
-        if (!active) return undefined;
+        if (!active || focusTrapPaused) return undefined;
 
         const onKeyDown = (event) => {
             if (event.key !== 'Tab') return;
@@ -78,7 +85,7 @@ export default function useDialogA11y({
             if (!node) return;
 
             const items = Array.from(node.querySelectorAll(FOCUSABLE))
-                .filter((el) => el.offsetParent !== null);
+                .filter((el) => el.offsetParent !== null && !el.closest('[inert]'));
             if (items.length === 0) {
                 event.preventDefault();
                 node.focus();
@@ -88,10 +95,10 @@ export default function useDialogA11y({
             const first = items[0];
             const last = items[items.length - 1];
 
-            if (event.shiftKey && document.activeElement === first) {
+            if (event.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
                 event.preventDefault();
                 last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
+            } else if (!event.shiftKey && (document.activeElement === last || !items.includes(document.activeElement))) {
                 event.preventDefault();
                 first.focus();
             }
@@ -99,5 +106,5 @@ export default function useDialogA11y({
 
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [active, containerRef]);
+    }, [active, containerRef, focusTrapPaused]);
 }

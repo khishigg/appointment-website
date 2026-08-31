@@ -61,6 +61,7 @@ export default function BookingDetailsPanel({
     onDeclineRegistration,
     onDismissRegistration,
     isRegistrationBackdropDismissible,
+    isIdentityPromptDesktop,
     onBackToRegistrationPrompt,
     onPasswordChange,
     onConfirmPasswordChange,
@@ -89,7 +90,7 @@ export default function BookingDetailsPanel({
         <>
 
             {/* Stepper — зөвхөн Desktop (lg+). Mobile дээр орон зай хэмнэхийн тулд нуугдана. */}
-            <div className="hidden flex-shrink-0 border-b border-line-soft bg-surface lg:flex lg:items-center lg:justify-center lg:px-5">
+            <div className="hidden shrink-0 border-b border-line-soft bg-surface lg:flex lg:items-center lg:justify-center lg:px-5">
                 <div className="lg:flex-none">
                     <BookingStepper step={step} />
                 </div>
@@ -109,7 +110,7 @@ export default function BookingDetailsPanel({
                 : 'lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 lg:overflow-hidden'
             }`}>
                 <div className={`relative lg:h-full lg:min-h-0 ${step === 5 ? 'h-full min-h-0' : ''}`}>
-                    <div className={`lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${step === 5 && activePaymentMethod !== 'banks' ? 'h-full min-h-0 overflow-hidden lg:overflow-y-auto' : ''}`}>
+                    <div className={`lg:no-scrollbar lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${step === 5 && activePaymentMethod !== 'banks' ? 'h-full min-h-0 overflow-hidden lg:overflow-y-auto' : ''}`}>
                     <AnimatePresence mode="wait">
                         <BookingStepContent
                             step={step}
@@ -149,10 +150,10 @@ export default function BookingDetailsPanel({
 
                     {/* Доод бүдгэрэл — гүйлгэх агуулга байгааг илэрхийлж, картууд
                         огцом тасрахаас сэргийлнэ. Хулганы үйлдэлд саад болохгүй. */}
-                    <div
+                    {step !== 5 ? <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-8 bg-gradient-to-t from-surface to-transparent lg:block"
-                    />
+                    /> : null}
                 </div>
 
                 {/* Баруун багана БҮХ алхамд — баталгаажилтад ч мөн (`confirmation`-ийн
@@ -232,6 +233,7 @@ export default function BookingDetailsPanel({
                     onDecline={onDeclineRegistration}
                     onDismiss={onDismissRegistration}
                     isBackdropDismissible={isRegistrationBackdropDismissible}
+                    isDesktop={isIdentityPromptDesktop}
                 />
             ) : null}
 
@@ -246,6 +248,7 @@ export default function BookingDetailsPanel({
                     onCodeChange={onOtpChange}
                     onResend={onResendOtp}
                     onBack={onBackToRegistrationPrompt}
+                    isDesktop={isIdentityPromptDesktop}
                 />
             ) : null}
 
@@ -260,6 +263,7 @@ export default function BookingDetailsPanel({
                     onConfirmPasswordChange={onConfirmPasswordChange}
                     onSubmit={onPasswordSetupSubmit}
                     onBack={onBackFromPasswordSetup}
+                    isDesktop={isIdentityPromptDesktop}
                 />
             ) : null}
 

@@ -119,20 +119,20 @@ export default function BranchSelector({
                                     <motion.div
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="booking-selection-active flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                                        className="booking-selection-active flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                                     >
                                         <FiCheck className="h-3 w-3" />
                                     </motion.div>
                                 ) : (
                                     <FiArrowRight
-                                        className="mt-0.5 h-4 w-4 flex-shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100"
+                                        className="mt-0.5 h-4 w-4 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100"
                                         aria-hidden="true"
                                     />
                                 )}
                             </div>
 
                             <div className="flex items-start gap-1.5 mt-2">
-                                <FiMapPin className="w-3.5 h-3.5 text-faint flex-shrink-0 mt-0.5" />
+                                <FiMapPin className="w-3.5 h-3.5 text-faint shrink-0 mt-0.5" />
                                 <span className="text-xs text-muted line-clamp-2">{branch.address}</span>
                             </div>
 
