@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiArrowRight, FiRefreshCw } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { FiRefreshCw } from "react-icons/fi";
 
 const MOBILE_ROW_COUNT = 4;
 const DESKTOP_ROW_COUNT = 3;
@@ -229,10 +228,6 @@ export default function PartnerLogos({ clinicData }) {
             Олон клиник, эмнэлэг манай платформыг ашиглан цаг захиалгаа хялбар удирдаж,
             өвчтөнүүддээ илүү хурдан, чанартай үйлчилгээ үзүүлж байна.
           </p>
-          <Link to="/register" className="partner-logos-header__action">
-            <span>Бидэнтэй нэгдэх</span>
-            <FiArrowRight aria-hidden="true" />
-          </Link>
         </header>
 
         {logoContent}

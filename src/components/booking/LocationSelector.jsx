@@ -3,7 +3,7 @@ import { FiClock, FiMapPin, FiPhone } from 'react-icons/fi';
 
 import ClinicMap from '../map/ClinicMap';
 import { buildLocationItems } from '../map/locationData';
-import { getTelHref, getWorkingHours } from './clinicFormat';
+import { getWorkingHours } from './clinicFormat';
 
 const getMapItemId = (item) => `${item.type}-${item.id}`;
 
@@ -13,8 +13,6 @@ const BranchLocationCard = ({
     onBookBranch,
     onShowOnMap,
 }) => {
-    const hasPhone = Boolean(item.phone);
-    const telHref = getTelHref(item.phone);
     const workingHours = getWorkingHours(item.source);
 
     return (
@@ -60,30 +58,14 @@ const BranchLocationCard = ({
                 </div>
             ) : null}
 
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <div className="mt-4">
                 <button
                     type="button"
-                    className="booking-cta-primary min-h-11 rounded-control px-3 text-sm font-semibold"
+                    className="booking-cta-primary min-h-11 w-full rounded-control px-3 text-sm font-semibold"
                     onClick={() => onBookBranch?.(item.source)}
                 >
                     Цаг захиалах
                 </button>
-                {hasPhone && telHref ? (
-                    <a
-                        href={telHref}
-                        className="flex min-h-11 items-center justify-center rounded-control border border-line px-3 text-center text-sm font-semibold text-heading no-underline transition-colors hover:bg-canvas"
-                    >
-                        Залгах
-                    </a>
-                ) : (
-                    <button
-                        type="button"
-                        className="min-h-11 rounded-control border border-line-soft px-3 text-sm font-semibold text-faint"
-                        disabled
-                    >
-                        Залгах
-                    </button>
-                )}
             </div>
         </article>
     );

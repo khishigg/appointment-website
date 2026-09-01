@@ -6,7 +6,6 @@ import Home from "./pages/Home";
 import BookingPage from "./pages/BookingPage";
 import CalendarPage from "./pages/CalendarPage";
 import Login from "./pages/Login";
-import RegisterPage from "./pages/RegisterPage";
 import MyAppointmentsPage from "./pages/MyAppointmentsPage";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -29,7 +28,7 @@ const AppShell = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
 
         {/* Home is public so visitors can use the header login action. */}
         <Route path="/" element={<Home />} />

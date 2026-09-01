@@ -226,15 +226,10 @@ export default function MyNavbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link to="/login" state={{ from: location }} className="desktop-login">
-                  <FiLogIn size={17} />
-                  <span>Нэвтрэх</span>
-                </Link>
-                <Link to="/register" className="btn-nav-register">
-                  Бүртгүүлэх
-                </Link>
-              </>
+              <Link to="/login" state={{ from: location }} className="desktop-login">
+                <FiLogIn size={17} />
+                <span>Нэвтрэх</span>
+              </Link>
             )}
           </div>
         </div>
@@ -322,9 +317,6 @@ export default function MyNavbar() {
                       <div className="mobile-navigation__actions">
                         <Link to="/login" state={{ from: location }} className="mobile-navigation__login" onClick={() => setIsMenuOpen(false)}>
                           Нэвтрэх
-                        </Link>
-                        <Link to="/register" className="mobile-navigation__register" onClick={() => setIsMenuOpen(false)}>
-                          Бүртгүүлэх
                         </Link>
                       </div>
                     )}
