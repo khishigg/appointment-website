@@ -55,10 +55,11 @@ const qpayRequest = ({
     bookingToken,
     accessToken,
     method,
+    resource,
     signal,
 }) =>
     clinicRequest(
-        `/api/clinics/${encodeURIComponent(clinicId)}/bookings/${encodeURIComponent(bookingId)}/qpay/${method === 'POST' ? 'invoice' : 'status'}`,
+        `/api/clinics/${encodeURIComponent(clinicId)}/bookings/${encodeURIComponent(bookingId)}/qpay/${resource}`,
         {
             method,
             preferServerMessage: true,
@@ -70,7 +71,10 @@ const qpayRequest = ({
     );
 
 export const createBookingQPayInvoice = (options) =>
-    qpayRequest({ ...options, method: 'POST' });
+    qpayRequest({ ...options, method: 'POST', resource: 'invoice' });
 
 export const getBookingQPayStatus = (options) =>
-    qpayRequest({ ...options, method: 'GET' });
+    qpayRequest({ ...options, method: 'GET', resource: 'status' });
+
+export const cancelBookingQPayInvoice = (options) =>
+    qpayRequest({ ...options, method: 'DELETE', resource: 'invoice' });

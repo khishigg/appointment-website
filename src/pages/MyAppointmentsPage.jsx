@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion as Motion, useReducedMotion } from 'framer-motion';
 import {
@@ -15,7 +15,19 @@ import {
 } from 'react-icons/fi';
 
 import { getMyBookings } from '../api/myBookings';
+import {
+    cancelBookingQPayInvoice,
+    getBookingQPayStatus,
+} from '../api/appointmentBookings';
+import { QPayCancelPrompt } from '../components/booking/QPayPaymentStep';
 import ResponsiveSheet from '../components/booking/ResponsiveSheet';
+import {
+    classifyQPayState,
+    isQPayInvoiceCancellable,
+    normalizeQPayInvoice,
+    QPAY_CANCELLATION_PROCESSING_STATES,
+    QPAY_POLLING_STATES,
+} from '../components/booking/qpayState';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useAuthStore } from '../store/AuthStore';
 
@@ -232,8 +244,242 @@ const DetailRow = ({ icon, label, value }) => {
     );
 };
 
-const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
+const AppointmentDetails = ({
+    appointment,
+    open,
+    onClose,
+    onRebook,
+    mode,
+    token,
+    onBookingsChanged,
+    onNotice,
+}) => {
     const [copied, setCopied] = useState(false);
+    const [paymentInvoice, setPaymentInvoice] = useState(null);
+    const [paymentState, setPaymentState] = useState('idle');
+    const [paymentError, setPaymentError] = useState('');
+    const [paymentNotice, setPaymentNotice] = useState('');
+    const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+    const [isCancellingPayment, setIsCancellingPayment] = useState(false);
+    const [isCancelPromptOpen, setIsCancelPromptOpen] = useState(false);
+    const paymentInvoiceRef = useRef(null);
+    const paymentRequestRef = useRef(null);
+    const isCheckingPaymentRef = useRef(false);
+    const isCancellingPaymentRef = useRef(false);
+
+    const finishCancelledPayment = useCallback(() => {
+        setIsCancelPromptOpen(false);
+        setPaymentState('cancelled');
+        setPaymentError('');
+        setPaymentNotice('');
+        onNotice('Захиалга амжилттай цуцлагдлаа');
+        onClose();
+        onBookingsChanged();
+    }, [onBookingsChanged, onClose, onNotice]);
+
+    const applyPaymentResponse = useCallback((data, httpStatus) => {
+        const nextInvoice = normalizeQPayInvoice(data || {}, paymentInvoiceRef.current);
+        const nextState = classifyQPayState(nextInvoice, httpStatus);
+        paymentInvoiceRef.current = nextInvoice;
+        setPaymentInvoice(nextInvoice);
+        setPaymentState(nextState);
+        setPaymentError('');
+        setPaymentNotice(
+            nextState === 'paidPendingConfirmation'
+                ? 'Төлбөр аль хэдийн баталгаажсан'
+                : ''
+        );
+
+        if (nextState === 'cancelled') {
+            finishCancelledPayment();
+        }
+
+        return nextState;
+    }, [finishCancelledPayment]);
+
+    const checkPaymentStatus = useCallback(async () => {
+        if (
+            !open ||
+            !appointment?.clinicId ||
+            !appointment?.bookingId ||
+            !token ||
+            isCheckingPaymentRef.current ||
+            isCancellingPaymentRef.current
+        ) {
+            return;
+        }
+
+        isCheckingPaymentRef.current = true;
+        setIsCheckingPayment(true);
+        setPaymentError('');
+        paymentRequestRef.current?.abort();
+        const controller = new AbortController();
+        paymentRequestRef.current = controller;
+
+        try {
+            const response = await getBookingQPayStatus({
+                clinicId: appointment.clinicId,
+                bookingId: appointment.bookingId,
+                accessToken: token,
+                signal: controller.signal,
+            });
+            applyPaymentResponse(response?.data, response?.status);
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setPaymentState('failed');
+            setPaymentError(
+                error.status === 404
+                    ? 'Захиалга олдсонгүй эсвэл хандах эрхгүй байна.'
+                    : error.message || 'Төлбөрийн төлөвийг шалгаж чадсангүй.'
+            );
+        } finally {
+            if (paymentRequestRef.current === controller) {
+                paymentRequestRef.current = null;
+            }
+            isCheckingPaymentRef.current = false;
+            setIsCheckingPayment(false);
+        }
+    }, [appointment?.bookingId, appointment?.clinicId, applyPaymentResponse, open, token]);
+
+    const handleConfirmCancellation = useCallback(async () => {
+        if (
+            !appointment?.clinicId ||
+            !appointment?.bookingId ||
+            !token ||
+            !isQPayInvoiceCancellable(paymentInvoiceRef.current) ||
+            isCancellingPaymentRef.current
+        ) {
+            setIsCancelPromptOpen(false);
+            void checkPaymentStatus();
+            return;
+        }
+
+        isCancellingPaymentRef.current = true;
+        setIsCancellingPayment(true);
+        setPaymentError('');
+        setPaymentNotice('');
+        paymentRequestRef.current?.abort();
+        const controller = new AbortController();
+        paymentRequestRef.current = controller;
+        let shouldRefreshStatus = false;
+
+        try {
+            const response = await cancelBookingQPayInvoice({
+                clinicId: appointment.clinicId,
+                bookingId: appointment.bookingId,
+                accessToken: token,
+                signal: controller.signal,
+            });
+            setIsCancelPromptOpen(false);
+            applyPaymentResponse(response?.data, response?.status);
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+
+            setIsCancelPromptOpen(false);
+
+            if (error.status === 409) {
+                applyPaymentResponse({
+                    bookingStatus: 'Paid',
+                    invoiceStatus: 'Paid',
+                    ...(error.data || {}),
+                }, error.status);
+                setPaymentNotice('Төлбөр аль хэдийн баталгаажсан');
+                onBookingsChanged();
+                shouldRefreshStatus = true;
+            } else if (error.status === 404) {
+                setPaymentState('failed');
+                setPaymentError('Захиалга олдсонгүй эсвэл хандах эрхгүй байна.');
+            } else {
+                setPaymentState('failed');
+                setPaymentError(
+                    error.message ||
+                    'Цуцлах хүсэлтийн үр дүн тодорхойгүй байна. Төлөвийг дахин шалгана уу.'
+                );
+                shouldRefreshStatus = true;
+            }
+        } finally {
+            if (paymentRequestRef.current === controller) {
+                paymentRequestRef.current = null;
+            }
+            isCancellingPaymentRef.current = false;
+            setIsCancellingPayment(false);
+
+            if (shouldRefreshStatus) {
+                void checkPaymentStatus();
+            }
+        }
+    }, [
+        appointment?.bookingId,
+        appointment?.clinicId,
+        applyPaymentResponse,
+        checkPaymentStatus,
+        onBookingsChanged,
+        token,
+    ]);
+
+    useEffect(() => {
+        paymentRequestRef.current?.abort();
+        paymentInvoiceRef.current = null;
+        isCheckingPaymentRef.current = false;
+        isCancellingPaymentRef.current = false;
+        setCopied(false);
+        setPaymentInvoice(null);
+        setPaymentState('idle');
+        setPaymentError('');
+        setPaymentNotice('');
+        setIsCheckingPayment(false);
+        setIsCancellingPayment(false);
+        setIsCancelPromptOpen(false);
+
+        if (open && appointment?.status === 'pending') {
+            void checkPaymentStatus();
+        }
+
+        return () => paymentRequestRef.current?.abort();
+    }, [appointment?.bookingId, appointment?.status, checkPaymentStatus, open]);
+
+    useEffect(() => {
+        if (
+            !open ||
+            !QPAY_POLLING_STATES.has(paymentState) ||
+            isCheckingPayment ||
+            isCancellingPayment
+        ) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+                void checkPaymentStatus();
+            }
+        }, 5_000);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [
+        checkPaymentStatus,
+        isCancellingPayment,
+        isCheckingPayment,
+        open,
+        paymentState,
+    ]);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (
+                open &&
+                document.visibilityState === 'visible' &&
+                QPAY_POLLING_STATES.has(paymentState) &&
+                !isCheckingPaymentRef.current &&
+                !isCancellingPaymentRef.current
+            ) {
+                void checkPaymentStatus();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [checkPaymentStatus, open, paymentState]);
+
     if (!appointment) return null;
 
     const clinicLabel = getClinicLabel(appointment);
@@ -241,6 +487,13 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
     const expiry = appointment.status === 'pending'
         ? formatDetailDateTime(appointment.expiresAt)
         : '';
+    const canCancelPayment =
+        appointment.status === 'pending' &&
+        paymentState === 'open' &&
+        isQPayInvoiceCancellable(paymentInvoice) &&
+        !isCheckingPayment &&
+        !isCancellingPayment;
+    const isCancellationProcessing = QPAY_CANCELLATION_PROCESSING_STATES.has(paymentState);
 
     const copyBookingId = async () => {
         if (!appointment.bookingId) return;
@@ -253,7 +506,9 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
     };
 
     const closeDetails = () => {
+        if (isCancellingPayment) return;
         setCopied(false);
+        setIsCancelPromptOpen(false);
         onClose();
     };
 
@@ -262,6 +517,7 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
             mode={mode}
             open={open}
             onClose={closeDetails}
+            dismissible={!isCancellingPayment}
             label="Захиалгын дэлгэрэнгүй"
             className={mode === 'sheet' ? '!top-auto max-h-[85dvh] rounded-t-[24px]' : ''}
         >
@@ -273,7 +529,8 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
                 <button
                     type="button"
                     onClick={closeDetails}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-control text-heading hover:bg-hover-surface focus:outline-none focus:ring-2 focus:ring-focus"
+                    disabled={isCancellingPayment}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-control text-heading hover:bg-hover-surface focus:outline-none focus:ring-2 focus:ring-focus disabled:opacity-50"
                     aria-label="Хаах"
                 >
                     <FiX className="h-5 w-5" aria-hidden="true" />
@@ -310,6 +567,44 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
                         </button>
                     </div>
                 ) : null}
+
+                {appointment.status === 'pending' && isCheckingPayment && paymentState === 'idle' ? (
+                    <div className="my-3 flex items-center gap-2 rounded-control border border-line bg-canvas px-3 py-2.5 text-sm text-muted" role="status">
+                        <FiRefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        Төлбөрийн төлөв шалгаж байна
+                    </div>
+                ) : null}
+
+                {isCancellationProcessing ? (
+                    <div className="my-3 rounded-control border border-info bg-info-surface px-3 py-2.5 text-sm text-info-text" role="status" aria-live="polite">
+                        <strong className="block font-semibold">Цуцлах хүсэлтийг шалгаж байна</strong>
+                        <span className="mt-1 block text-xs leading-5">
+                            {paymentInvoice?.errorMessage || 'Цуцлалт баталгаажтал захиалга болон цаг хадгалагдана.'}
+                        </span>
+                    </div>
+                ) : null}
+
+                {paymentNotice ? (
+                    <div className="my-3 rounded-control border border-info bg-info-surface px-3 py-2.5 text-sm font-semibold text-info-text" role="status">
+                        {paymentNotice}
+                    </div>
+                ) : null}
+
+                {paymentError ? (
+                    <div className="my-3 rounded-control border border-danger bg-danger-surface px-3 py-2.5 text-sm text-danger-text" role="alert">
+                        <span>{paymentError}</span>
+                        {paymentState === 'failed' && appointment.status === 'pending' ? (
+                            <button
+                                type="button"
+                                onClick={() => void checkPaymentStatus()}
+                                disabled={isCheckingPayment}
+                                className="mt-2 block min-h-11 rounded-control border border-danger px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-focus disabled:opacity-50"
+                            >
+                                Дахин шалгах
+                            </button>
+                        ) : null}
+                    </div>
+                ) : null}
             </div>
 
             {canRebook ? (
@@ -323,11 +618,28 @@ const AppointmentDetails = ({ appointment, open, onClose, onRebook, mode }) => {
                         Дахин захиалах
                     </button>
                 </footer>
+            ) : canCancelPayment ? (
+                <footer className="shrink-0 border-t border-line-soft bg-surface p-4 sm:p-5">
+                    <button
+                        type="button"
+                        onClick={() => setIsCancelPromptOpen(true)}
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-control border border-danger bg-surface px-4 text-sm font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus"
+                    >
+                        Захиалга цуцлах
+                    </button>
+                </footer>
+            ) : null}
+
+            {isCancelPromptOpen ? (
+                <QPayCancelPrompt
+                    onContinue={() => setIsCancelPromptOpen(false)}
+                    onConfirm={handleConfirmCancellation}
+                    isSubmitting={isCancellingPayment}
+                />
             ) : null}
         </ResponsiveSheet>
     );
 };
-
 const LoadingState = () => (
     <div className="space-y-3" role="status" aria-live="polite" aria-label="Захиалгуудыг уншиж байна">
         {Array.from({ length: 3 }, (_, index) => (
@@ -360,6 +672,13 @@ export default function MyAppointmentsPage() {
     const [error, setError] = useState('');
     const [errorStatus, setErrorStatus] = useState(null);
     const [reloadKey, setReloadKey] = useState(0);
+    const [cancellationNotice, setCancellationNotice] = useState('');
+
+    useEffect(() => {
+        if (!cancellationNotice) return undefined;
+        const timeoutId = window.setTimeout(() => setCancellationNotice(''), 5_000);
+        return () => window.clearTimeout(timeoutId);
+    }, [cancellationNotice]);
 
     useEffect(() => {
         if (!token) {
@@ -412,6 +731,18 @@ export default function MyAppointmentsPage() {
             ? `/booking?clinicId=${encodeURIComponent(appointment.clinicId)}`
             : '/booking');
     };
+
+    const handleCloseDetails = useCallback(() => {
+        setSelectedAppointment(null);
+    }, []);
+
+    const handleBookingsChanged = useCallback(() => {
+        setReloadKey((value) => value + 1);
+    }, []);
+
+    const handleCancellationNotice = useCallback((message) => {
+        setCancellationNotice(message);
+    }, []);
 
     const loginAction = (
         <Link
@@ -493,15 +824,24 @@ export default function MyAppointmentsPage() {
                     </Link>
                 </header>
 
+                {cancellationNotice ? (
+                    <div className="mb-4 rounded-panel border border-success bg-success-surface px-4 py-3 text-sm font-semibold text-success-text" role="status" aria-live="polite">
+                        {cancellationNotice}
+                    </div>
+                ) : null}
+
                 {pageContent}
             </div>
 
             <AppointmentDetails
                 appointment={selectedAppointment}
                 open={Boolean(selectedAppointment)}
-                onClose={() => setSelectedAppointment(null)}
+                onClose={handleCloseDetails}
                 onRebook={handleRebook}
                 mode={isTabletUp ? 'dialog' : 'sheet'}
+                token={token}
+                onBookingsChanged={handleBookingsChanged}
+                onNotice={handleCancellationNotice}
             />
         </main>
     );

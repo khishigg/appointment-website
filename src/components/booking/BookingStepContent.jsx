@@ -31,6 +31,7 @@ export default function BookingStepContent({
     invoice,
     paymentError,
     isCheckingPayment,
+    isCancellingPayment,
     activePaymentView,
     onCheckPayment,
     onOpenBankApps,
@@ -250,6 +251,7 @@ export default function BookingStepContent({
                         invoice={invoice}
                         error={paymentError}
                         isChecking={isCheckingPayment}
+                        isCancelling={isCancellingPayment}
                         confirmation={confirmation}
                         selectedClinic={selectedClinic}
                         selectedBranch={selectedBranch}

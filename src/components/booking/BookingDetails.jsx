@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBookingStore } from '../../store/BookingStore';
 import { useBookingLayout } from '../../hooks/useMediaQuery';
 import {
+    cancelBookingQPayInvoice,
     createAppointmentBooking,
     createBookingQPayInvoice,
     declineBookingIdentity,
@@ -14,6 +15,16 @@ import {
 import { useAuthStore } from '../../store/AuthStore';
 import ResponsiveSheet from './ResponsiveSheet';
 import BookingDetailsPanel from './BookingDetailsPanel';
+import {
+    classifyQPayState,
+    getQPayBookingStatus,
+    isQPayInvoiceCancellable,
+    normalizeQPayInvoice,
+    normalizeQPayStatus,
+    QPAY_CANCELLATION_PROCESSING_STATES,
+    QPAY_POLLING_STATES,
+    QPAY_TERMINAL_STATES,
+} from './qpayState';
 
 const MOCK_SERVICES = [
     { id: 'lombo', name: 'Ломбо', description: 'Шүд цэвэрлэгээ, оношлогоо' },
@@ -29,59 +40,13 @@ const SLIDE_VARIANTS = {
 
 const QPAY_RECOVERY_KEY = 'ashid_qpay_pending_booking';
 const POLLING_INTERVAL_MS = 5_000;
-const POLLING_STATES = new Set(['creating', 'open', 'paidPendingConfirmation']);
-const TERMINAL_PAYMENT_STATES = new Set(['confirmed', 'expired', 'failed', 'createUnknown']);
-
-const normalizeStatus = (value) => String(value || '').replace(/[\s_-]/g, '').toLowerCase();
-
-const getBookingStatus = (value = {}) =>
-    value.bookingStatus ?? value.BookingStatus ?? value.status ?? value.Status ?? '';
-
-const normalizeInvoice = (value = {}, previous = null) => {
-    const nextUrls = value.urls ?? value.Urls;
-    const nextQrImage = value.qrImage ?? value.QrImage;
-
-    return {
-        invoiceId: value.invoiceId ?? value.InvoiceId ?? previous?.invoiceId ?? '',
-        bookingStatus: getBookingStatus(value) || previous?.bookingStatus || '',
-        invoiceStatus: value.invoiceStatus ?? value.InvoiceStatus ?? previous?.invoiceStatus ?? '',
-        amount: value.amount ?? value.Amount ?? previous?.amount ?? null,
-        currency: value.currency ?? value.Currency ?? previous?.currency ?? 'MNT',
-        qrCode: value.qrCode ?? value.QrCode ?? previous?.qrCode ?? '',
-        qrImage: nextQrImage || previous?.qrImage || '',
-        urls: Array.isArray(nextUrls) && nextUrls.length > 0
-            ? nextUrls
-            : previous?.urls || [],
-        invoiceExpiresAt:
-            value.invoiceExpiresAt ??
-            value.InvoiceExpiresAt ??
-            previous?.invoiceExpiresAt ??
-            '',
-        errorCode: value.errorCode ?? value.ErrorCode ?? null,
-        errorMessage: value.errorMessage ?? value.ErrorMessage ?? null,
-    };
-};
-
-const classifyPaymentState = (invoice, httpStatus) => {
-    const invoiceStatus = normalizeStatus(invoice?.invoiceStatus);
-    const bookingStatus = normalizeStatus(invoice?.bookingStatus);
-
-    if (bookingStatus === 'confirmed') return 'confirmed';
-    if (invoiceStatus === 'cancelled' || bookingStatus === 'expired') return 'expired';
-    if (invoiceStatus === 'createunknown') return 'createUnknown';
-    if (invoiceStatus === 'failed') return 'failed';
-    if (httpStatus === 202 || invoiceStatus === 'creating') return 'creating';
-    if (invoiceStatus === 'paid' && bookingStatus === 'paid') return 'paidPendingConfirmation';
-    if (invoiceStatus === 'open' && bookingStatus === 'awaitingpayment') return 'open';
-    return 'failed';
-};
 
 const getPaymentErrorMessage = (error) => {
     if (error?.status === 401 || error?.status === 403) {
         return 'Төлбөрийн мэдээлэлд хандах эрх хүрэлцэхгүй байна.';
     }
     if (error?.status === 404) {
-        return 'Захиалга олдсонгүй эсвэл төлбөрийн хандалт тохирохгүй байна.';
+        return 'Захиалга олдсонгүй эсвэл хандах эрхгүй байна.';
     }
     if (error?.status === 409) {
         return error.message || 'QPay төлбөр үүсгэх боломжгүй байна.';
@@ -180,15 +145,24 @@ export default function BookingDetails({
     const [isCheckingPayment, setIsCheckingPayment] = useState(false);
     const [activePaymentMethod, setActivePaymentMethod] = useState(null);
     const [isCancelPaymentPromptOpen, setIsCancelPaymentPromptOpen] = useState(false);
+    const [isCancellingPayment, setIsCancellingPayment] = useState(false);
+    const [cancellationNotice, setCancellationNotice] = useState('');
     const invoiceCreationRef = useRef(false);
     const paymentRequestRef = useRef(null);
     const paymentSessionRef = useRef(null);
     const invoiceRef = useRef(null);
     const isCheckingPaymentRef = useRef(false);
+    const isCancellingPaymentRef = useRef(false);
     const recoveryAttemptRef = useRef('');
 
 
     const services = products ?? MOCK_SERVICES;
+
+    useEffect(() => {
+        if (!cancellationNotice) return undefined;
+        const timeoutId = window.setTimeout(() => setCancellationNotice(''), 5_000);
+        return () => window.clearTimeout(timeoutId);
+    }, [cancellationNotice]);
 
     // Validation
     const isPhoneValid = patientInfo.phone && /^[0-9]{8}$/.test(patientInfo.phone);
@@ -267,12 +241,15 @@ export default function BookingDetails({
         setInvoice(null);
         setPaymentError('');
         setIsCheckingPayment(false);
+        setIsCancellingPayment(false);
         setActivePaymentMethod(null);
         setIsCancelPaymentPromptOpen(false);
+        setCancellationNotice('');
         invoiceCreationRef.current = false;
         paymentSessionRef.current = null;
         invoiceRef.current = null;
         isCheckingPaymentRef.current = false;
+        isCancellingPaymentRef.current = false;
         setTimeout(() => {
             resetBooking();
         }, 500);
@@ -354,7 +331,7 @@ export default function BookingDetails({
 
     const getPaymentRequestOptions = useCallback((session) => {
         const auth = useAuthStore.getState();
-        const isUser = auth.isAuthenticated && normalizeStatus(auth.role) === 'user' && Boolean(auth.token);
+        const isUser = auth.isAuthenticated && normalizeQPayStatus(auth.role) === 'user' && Boolean(auth.token);
 
         return {
             clinicId: session.clinicId,
@@ -368,11 +345,13 @@ export default function BookingDetails({
         if (!session?.clinicId || !session?.bookingId) return;
 
         const auth = useAuthStore.getState();
-        const isUser = auth.isAuthenticated && normalizeStatus(auth.role) === 'user' && Boolean(auth.token);
+        const isUser = auth.isAuthenticated && normalizeQPayStatus(auth.role) === 'user' && Boolean(auth.token);
         const recovery = {
             clinicId: session.clinicId,
             bookingId: session.bookingId,
             invoiceExpiresAt: paymentInvoice?.invoiceExpiresAt || '',
+            bookingStatus: paymentInvoice?.bookingStatus || '',
+            invoiceStatus: paymentInvoice?.invoiceStatus || '',
             ...(isUser || !session.bookingToken ? {} : { bookingToken: session.bookingToken }),
         };
 
@@ -383,9 +362,41 @@ export default function BookingDetails({
         }
     }, []);
 
+    const completeCancelledPayment = useCallback(() => {
+        clearPaymentRecovery();
+        closeBookingDetails();
+        setStep(1);
+        setConfirmation(null);
+        setSubmitError('');
+        setNeedsNewTimeSlot(false);
+        setBookingSession(null);
+        setIsRegistrationPromptOpen(false);
+        setIsEmailOtpPromptOpen(false);
+        setIsPasswordSetupPromptOpen(false);
+        setPaymentState('idle');
+        setInvoice(null);
+        setPaymentError('');
+        setIsCheckingPayment(false);
+        setIsCancellingPayment(false);
+        setActivePaymentMethod(null);
+        setIsCancelPaymentPromptOpen(false);
+        invoiceCreationRef.current = false;
+        paymentSessionRef.current = null;
+        invoiceRef.current = null;
+        isCheckingPaymentRef.current = false;
+        isCancellingPaymentRef.current = false;
+        selectTimeSlot(null);
+        refreshAvailability();
+        setCancellationNotice('Захиалга амжилттай цуцлагдлаа');
+
+        if (selectedDoctor) {
+            window.setTimeout(() => openTimeSlotModal(), 0);
+        }
+    }, [closeBookingDetails, openTimeSlotModal, refreshAvailability, selectTimeSlot, selectedDoctor]);
+
     const applyInvoiceResponse = useCallback((data, httpStatus, session) => {
-        const nextInvoice = normalizeInvoice(data || {}, invoiceRef.current);
-        const nextState = classifyPaymentState(nextInvoice, httpStatus);
+        const nextInvoice = normalizeQPayInvoice(data || {}, invoiceRef.current);
+        const nextState = classifyQPayState(nextInvoice, httpStatus);
         invoiceRef.current = nextInvoice;
         setInvoice(nextInvoice);
 
@@ -395,6 +406,8 @@ export default function BookingDetails({
                 ? nextInvoice.errorMessage || 'QPay invoice амжилтгүй боллоо.'
                 : nextState === 'createUnknown'
                     ? nextInvoice.errorMessage || 'Invoice-ийн үр дүн тодорхойгүй байна. Дахин invoice үүсгэхгүйгээр эмнэлэгтэй холбогдоно уу.'
+                    : QPAY_CANCELLATION_PROCESSING_STATES.has(nextState)
+                        ? nextInvoice.errorMessage || ''
                     : nextState === 'expired'
                         ? 'Invoice-ийн хүчинтэй хугацаа дууссан байна.'
                         : ''
@@ -412,14 +425,16 @@ export default function BookingDetails({
             clearPaymentRecovery();
             refreshAvailability();
             setStep(6);
-        } else if (TERMINAL_PAYMENT_STATES.has(nextState)) {
+        } else if (nextState === 'cancelled') {
+            completeCancelledPayment();
+        } else if (QPAY_TERMINAL_STATES.has(nextState)) {
             clearPaymentRecovery();
         } else {
             persistPaymentRecovery(session, nextInvoice);
         }
 
         return nextState;
-    }, [persistPaymentRecovery, refreshAvailability]);
+    }, [completeCancelledPayment, persistPaymentRecovery, refreshAvailability]);
 
     const checkPaymentStatus = useCallback(async (sessionOverride) => {
         const session = sessionOverride || paymentSessionRef.current;
@@ -478,19 +493,19 @@ export default function BookingDetails({
             });
             const nextState = applyInvoiceResponse(response?.data, response?.status, session);
 
-            if (POLLING_STATES.has(nextState)) {
+            if (QPAY_POLLING_STATES.has(nextState)) {
                 void checkPaymentStatus(session);
             }
         } catch (error) {
             if (error.name === 'AbortError') return;
 
-            const errorInvoiceStatus = normalizeStatus(error.data?.invoiceStatus ?? error.data?.InvoiceStatus);
+            const errorInvoiceStatus = normalizeQPayStatus(error.data?.invoiceStatus ?? error.data?.InvoiceStatus);
             if (errorInvoiceStatus === 'failed' || errorInvoiceStatus === 'createunknown') {
                 applyInvoiceResponse(error.data, error.status, session);
                 return;
             }
 
-            const isUnknown = normalizeStatus(error.code) === 'createunknown';
+            const isUnknown = normalizeQPayStatus(error.code) === 'createunknown';
             setPaymentState(isUnknown ? 'createUnknown' : 'failed');
             setPaymentError(
                 isUnknown
@@ -512,7 +527,7 @@ export default function BookingDetails({
             bookingId: session?.bookingId,
         };
         const paymentAmount = Number(merged.paymentAmount ?? merged.PaymentAmount);
-        const bookingStatus = normalizeStatus(getBookingStatus(merged));
+        const bookingStatus = normalizeQPayStatus(getQPayBookingStatus(merged));
 
         setConfirmation(merged);
         refreshAvailability();
@@ -820,8 +835,81 @@ export default function BookingDetails({
         setIsCancelPaymentPromptOpen(false);
     }, []);
 
+    const handleConfirmCancelPayment = useCallback(async () => {
+        const session = paymentSessionRef.current;
+        if (!session || isCancellingPaymentRef.current) return;
+
+        if (!isQPayInvoiceCancellable(invoiceRef.current)) {
+            setIsCancelPaymentPromptOpen(false);
+            void checkPaymentStatus(session);
+            return;
+        }
+
+        isCancellingPaymentRef.current = true;
+        setIsCancellingPayment(true);
+        setPaymentError('');
+        paymentRequestRef.current?.abort();
+        const controller = new AbortController();
+        paymentRequestRef.current = controller;
+        let shouldRefreshStatus = false;
+
+        try {
+            const response = await cancelBookingQPayInvoice({
+                ...getPaymentRequestOptions(session),
+                signal: controller.signal,
+            });
+
+            setIsCancelPaymentPromptOpen(false);
+            setActivePaymentMethod(null);
+            applyInvoiceResponse(response?.data, response?.status, session);
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+
+            setIsCancelPaymentPromptOpen(false);
+            setActivePaymentMethod(null);
+
+            if (error.status === 409) {
+                const paidResponse = {
+                    bookingStatus: 'Paid',
+                    invoiceStatus: 'Paid',
+                    ...(error.data || {}),
+                };
+                applyInvoiceResponse(paidResponse, error.status, session);
+                setPaymentError('Төлбөр аль хэдийн баталгаажсан');
+                shouldRefreshStatus = true;
+            } else if (error.status === 404) {
+                setPaymentState('failed');
+                setPaymentError('Захиалга олдсонгүй эсвэл хандах эрхгүй байна.');
+                clearPaymentRecovery();
+            } else {
+                const uncertainInvoice = normalizeQPayInvoice({
+                    bookingStatus: invoiceRef.current?.bookingStatus || 'AwaitingPayment',
+                    invoiceStatus: 'CancelUnknown',
+                    errorCode: error.code || 'FE_TRANSPORT_ERROR',
+                    errorMessage: error.message || 'Цуцлах хүсэлтийн үр дүн тодорхойгүй байна.',
+                }, invoiceRef.current);
+                invoiceRef.current = uncertainInvoice;
+                setInvoice(uncertainInvoice);
+                setPaymentState('cancelUnknown');
+                setPaymentError(uncertainInvoice.errorMessage);
+                persistPaymentRecovery(session, uncertainInvoice);
+                shouldRefreshStatus = true;
+            }
+        } finally {
+            if (paymentRequestRef.current === controller) {
+                paymentRequestRef.current = null;
+            }
+            isCancellingPaymentRef.current = false;
+            setIsCancellingPayment(false);
+
+            if (shouldRefreshStatus) {
+                void checkPaymentStatus(session);
+            }
+        }
+    }, [applyInvoiceResponse, checkPaymentStatus, getPaymentRequestOptions, persistPaymentRecovery]);
+
     useEffect(() => {
-        if (!POLLING_STATES.has(paymentState) || isCheckingPayment) return undefined;
+        if (!QPAY_POLLING_STATES.has(paymentState) || isCheckingPayment || isCancellingPayment) return undefined;
 
         const timeoutId = window.setTimeout(() => {
             if (document.visibilityState === 'visible') {
@@ -830,13 +918,13 @@ export default function BookingDetails({
         }, POLLING_INTERVAL_MS);
 
         return () => window.clearTimeout(timeoutId);
-    }, [checkPaymentStatus, isCheckingPayment, paymentState]);
+    }, [checkPaymentStatus, isCancellingPayment, isCheckingPayment, paymentState]);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (
                 document.visibilityState === 'visible' &&
-                POLLING_STATES.has(paymentState) &&
+                QPAY_POLLING_STATES.has(paymentState) &&
                 !isCheckingPaymentRef.current
             ) {
                 void checkPaymentStatus();
@@ -864,8 +952,10 @@ export default function BookingDetails({
             return;
         }
 
+        const recoveredStatus = normalizeQPayStatus(recovery.invoiceStatus);
+        const isRecoveringCancellation = ['cancelunknown', 'cancelpending'].includes(recoveredStatus);
         const expiryMs = Date.parse(recovery.invoiceExpiresAt || '');
-        if (Number.isFinite(expiryMs) && expiryMs <= Date.now()) {
+        if (!isRecoveringCancellation && Number.isFinite(expiryMs) && expiryMs <= Date.now()) {
             clearPaymentRecovery();
             return;
         }
@@ -876,18 +966,19 @@ export default function BookingDetails({
             bookingToken: recovery.bookingToken,
             draft: { bookingId: recovery.bookingId },
         };
-        const recoveredInvoice = normalizeInvoice({
+        const recoveredInvoice = normalizeQPayInvoice({
             invoiceExpiresAt: recovery.invoiceExpiresAt,
-            bookingStatus: 'AwaitingPayment',
-            invoiceStatus: 'Creating',
+            bookingStatus: recovery.bookingStatus || 'AwaitingPayment',
+            invoiceStatus: recovery.invoiceStatus || 'Creating',
         });
+        const recoveredPaymentState = classifyQPayState(recoveredInvoice);
 
         invoiceCreationRef.current = true;
         paymentSessionRef.current = session;
         invoiceRef.current = recoveredInvoice;
         setBookingSession(session);
         setInvoice(recoveredInvoice);
-        setPaymentState('creating');
+        setPaymentState(recoveredPaymentState);
         setPaymentError('');
         setStep(5);
         openBookingDetails();
@@ -905,7 +996,17 @@ export default function BookingDetails({
     // Бүх breakpoint дээр overlay тул хаах/нээхийг ResponsiveSheet өөрөө
     // AnimatePresence-ээр зохицуулна — энд эрт return хийх шаардлагагүй.
     return (
-        <ResponsiveSheet
+        <>
+            {cancellationNotice ? (
+                <div
+                    className="fixed inset-x-4 top-[calc(var(--app-header-height)_+_1rem)] z-[var(--z-toast)] mx-auto max-w-md rounded-panel border border-success bg-success-surface px-4 py-3 text-center text-sm font-semibold text-success-text shadow-overlay"
+                    role="status"
+                    aria-live="polite"
+                >
+                    {cancellationNotice}
+                </div>
+            ) : null}
+            <ResponsiveSheet
             mode={mode}
             open={isBookingDetailsOpen}
             focusTrapPaused={isRegistrationPromptOpen || isEmailOtpPromptOpen || isPasswordSetupPromptOpen}
@@ -973,6 +1074,7 @@ export default function BookingDetails({
                 invoice={invoice}
                 paymentError={paymentError}
                 isCheckingPayment={isCheckingPayment}
+                isCancellingPayment={isCancellingPayment}
                 activePaymentMethod={activePaymentMethod}
                 isCancelPaymentPromptOpen={isCancelPaymentPromptOpen}
                 onCheckPayment={() => checkPaymentStatus()}
@@ -980,10 +1082,11 @@ export default function BookingDetails({
                 onOpenQr={handleOpenQr}
                 onCancelPayment={handleRequestCancelPayment}
                 onContinuePayment={handleContinuePayment}
-                onConfirmCancelPayment={handleFinish}
+                onConfirmCancelPayment={handleConfirmCancelPayment}
                 onClosePaymentMethod={handleClosePaymentMethod}
                 slideVariants={SLIDE_VARIANTS}
             />
-        </ResponsiveSheet>
+            </ResponsiveSheet>
+        </>
     );
 }

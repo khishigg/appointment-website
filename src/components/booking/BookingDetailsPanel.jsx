@@ -75,6 +75,7 @@ export default function BookingDetailsPanel({
     invoice,
     paymentError,
     isCheckingPayment,
+    isCancellingPayment,
     activePaymentMethod,
     isCancelPaymentPromptOpen,
     onCheckPayment,
@@ -137,6 +138,7 @@ export default function BookingDetailsPanel({
                             invoice={invoice}
                             paymentError={paymentError}
                             isCheckingPayment={isCheckingPayment}
+                            isCancellingPayment={isCancellingPayment}
                             activePaymentView={activePaymentMethod}
                             onCheckPayment={onCheckPayment}
                             onOpenBankApps={onOpenBankApps}
@@ -282,6 +284,7 @@ export default function BookingDetailsPanel({
                 <QPayCancelPrompt
                     onContinue={onContinuePayment}
                     onConfirm={onConfirmCancelPayment}
+                    isSubmitting={isCancellingPayment}
                 />
             ) : null}
         </>

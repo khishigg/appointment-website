@@ -16,6 +16,10 @@ import {
     FiUser,
     FiX,
 } from 'react-icons/fi';
+import {
+    isQPayInvoiceCancellable,
+    QPAY_CANCELLATION_PROCESSING_STATES,
+} from './qpayState';
 
 const formatAmount = (amount, currency = 'MNT') => {
     const numeric = Number(amount);
@@ -224,13 +228,13 @@ const InvoiceExpiry = ({ expiresAt }) => {
 };
 
 const PaymentStatusCard = ({ paymentState, isChecking, error, hideIdle = false }) => {
-    if (error || ['failed', 'expired', 'createUnknown'].includes(paymentState)) {
+    if (QPAY_CANCELLATION_PROCESSING_STATES.has(paymentState)) {
         return (
-            <div className="qpay-payment__status qpay-payment__status--error" role="alert">
-                <span className="qpay-payment__status-icon" aria-hidden="true"><FiAlertCircle /></span>
+            <div className="qpay-payment__status" role="status" aria-live="polite">
+                <span className="qpay-payment__status-icon" aria-hidden="true"><FiRefreshCw className="animate-spin" /></span>
                 <span className="qpay-payment__status-copy">
-                    <strong>{paymentState === 'expired' ? 'Төлбөрийн хугацаа дууссан' : 'Төлбөрийн төлөвт алдаа гарлаа'}</strong>
-                    <span>{paymentState === 'expired' ? 'Дахин invoice үүсгэхийн тулд эмнэлэгтэй холбогдоно уу.' : 'Төлөвөө дахин шалгах эсвэл эмнэлэгтэй холбогдоно уу.'}</span>
+                    <strong>Цуцлах хүсэлтийг шалгаж байна</strong>
+                    <span>{error || 'Цуцлалт баталгаажтал захиалга болон цаг хадгалагдана.'}</span>
                 </span>
             </div>
         );
@@ -239,7 +243,26 @@ const PaymentStatusCard = ({ paymentState, isChecking, error, hideIdle = false }
         return (
             <div className="qpay-payment__status qpay-payment__status--success" role="status" aria-live="polite">
                 <span className="qpay-payment__status-icon" aria-hidden="true"><FiCheckCircle /></span>
-                <span className="qpay-payment__status-copy"><strong>Төлбөр баталгаажлаа</strong><span>Таны цагийг эмнэлгийн системд үүсгэж байна.</span></span>
+                <span className="qpay-payment__status-copy"><strong>{error || 'Төлбөр баталгаажлаа'}</strong><span>Таны цагийг эмнэлгийн системд үүсгэж байна.</span></span>
+            </div>
+        );
+    }
+    if (paymentState === 'cancelled') {
+        return (
+            <div className="qpay-payment__status qpay-payment__status--success" role="status" aria-live="polite">
+                <span className="qpay-payment__status-icon" aria-hidden="true"><FiCheckCircle /></span>
+                <span className="qpay-payment__status-copy"><strong>Захиалга амжилттай цуцлагдлаа</strong></span>
+            </div>
+        );
+    }
+    if (error || ['failed', 'expired', 'createUnknown'].includes(paymentState)) {
+        return (
+            <div className="qpay-payment__status qpay-payment__status--error" role="alert">
+                <span className="qpay-payment__status-icon" aria-hidden="true"><FiAlertCircle /></span>
+                <span className="qpay-payment__status-copy">
+                    <strong>{paymentState === 'expired' ? 'Төлбөрийн хугацаа дууссан' : 'Төлбөрийн төлөвт алдаа гарлаа'}</strong>
+                    <span>{paymentState === 'expired' ? 'Дахин invoice үүсгэхийн тулд эмнэлэгтэй холбогдоно уу.' : 'Төлөвөө дахин шалгах эсвэл эмнэлэгтэй холбогдоно уу.'}</span>
+                </span>
             </div>
         );
     }
@@ -327,6 +350,7 @@ export default function QPayPaymentStep({
     invoice,
     error,
     isChecking,
+    isCancelling,
     confirmation,
     selectedClinic,
     selectedBranch,
@@ -341,7 +365,9 @@ export default function QPayPaymentStep({
 }) {
     const isPreparing = paymentState === 'creating';
     const amount = formatAmount(invoice?.amount, invoice?.currency);
-    const isTerminalError = ['expired', 'failed', 'createUnknown'].includes(paymentState);
+    const isTerminalError = ['expired', 'failed', 'createUnknown', 'cancelled'].includes(paymentState);
+    const isCancellationProcessing = QPAY_CANCELLATION_PROCESSING_STATES.has(paymentState);
+    const canCancel = paymentState === 'open' && isQPayInvoiceCancellable(invoice) && !isCancelling;
     const bankTriggerRef = useRef(null);
     const bankHeadingRef = useRef(null);
     const previousViewRef = useRef(view);
@@ -363,7 +389,7 @@ export default function QPayPaymentStep({
     if (isPreparing) {
         return (
             <div className="qpay-payment qpay-payment--preparing" aria-label="Төлбөрийн мэдээлэл бэлдэж байна">
-                <PaymentHeader title="Захиаллага баталгаажуулах" onBack={onCancel} className="qpay-payment__header--left" />
+                <PaymentHeader title="Захиаллага баталгаажуулах" className="qpay-payment__header--left" />
                 <div className="qpay-payment__preparing" role="status" aria-live="polite">
                     <FiRefreshCw aria-hidden="true" className="animate-spin" />
                     <h3>Төлбөрийн мэдээлэл бэлдэж байна</h3>
@@ -375,7 +401,7 @@ export default function QPayPaymentStep({
 
     return (
         <div className="qpay-payment qpay-payment--checkout" aria-label="Төлбөрийн сонголт">
-            <PaymentHeader title="Захиаллага баталгаажуулах" onBack={onCancel} className="qpay-payment__header--left" />
+            <PaymentHeader title="Захиаллага баталгаажуулах" onBack={canCancel ? onCancel : undefined} className="qpay-payment__header--left" />
             <div className="qpay-payment__layout">
                 <section className="qpay-payment__amount" aria-label="Төлөх дүн">
                     <h3 className="qpay-payment__section-title">Урьдчилгаа төлбөр</h3>
@@ -387,7 +413,7 @@ export default function QPayPaymentStep({
                 </section>
                 {summary}
                 <div className="qpay-payment__controls">
-                    {!isTerminalError ? (
+                    {!isTerminalError && !isCancellationProcessing ? (
                         <section className="qpay-payment__methods" aria-labelledby="qpay-payment-methods-title">
                             <h3 id="qpay-payment-methods-title" className="qpay-payment__section-title">Төлбөрийн арга</h3>
                             <div className="qpay-payment__method-list">
@@ -405,10 +431,10 @@ export default function QPayPaymentStep({
                         </section>
                     ) : null}
                     <PaymentStatusCard paymentState={paymentState} isChecking={isChecking} error={error} hideIdle />
-                    {!['confirmed', 'expired'].includes(paymentState) ? (
+                    {!['confirmed', 'expired', 'cancelled'].includes(paymentState) ? (
                         <div className="qpay-payment__actions">
-                            <CheckPaymentButton isChecking={isChecking} onCheck={onCheck} primary />
-                            <button type="button" onClick={onCancel} className="qpay-payment__cancel-button">Цуцлах</button>
+                            <CheckPaymentButton isChecking={isChecking || isCancelling} onCheck={onCheck} primary />
+                            {canCancel ? <button type="button" onClick={onCancel} className="qpay-payment__cancel-button">Цуцлах</button> : null}
                         </div>
                     ) : null}
                 </div>
@@ -504,7 +530,8 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
     const isPaid = ['paidPendingConfirmation', 'confirmed'].includes(paymentState);
     const isTerminal = ['expired', 'failed', 'createUnknown'].includes(paymentState);
     const isCreating = paymentState === 'creating';
-    const isFeedback = isPaid || isTerminal || isCreating;
+    const isCancellationProcessing = QPAY_CANCELLATION_PROCESSING_STATES.has(paymentState);
+    const isFeedback = isPaid || isTerminal || isCreating || isCancellationProcessing;
     const hasQr = Boolean(source) && source !== failedSource && !isFeedback;
     const missingQr = !hasQr && !isFeedback;
     const description = isFeedback ? '' : 'Банкны апп-аар QR кодыг уншуулна уу.';
@@ -524,7 +551,7 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
                 </div>
             ) : (
                 <div className="qpay-qr__feedback">
-                    {isPaid || isTerminal ? <PaymentStatusCard paymentState={isPaid ? 'paidPendingConfirmation' : paymentState} /> : (
+                    {isPaid || isTerminal || isCancellationProcessing ? <PaymentStatusCard paymentState={isPaid ? 'paidPendingConfirmation' : paymentState} /> : (
                         <div className={missingQr ? 'qpay-qr__image-error' : 'qpay-qr__creating'} role={missingQr ? 'alert' : 'status'}>
                             {missingQr ? <FiAlertCircle aria-hidden="true" /> : <FiRefreshCw aria-hidden="true" className="animate-spin" />}
                             <p>{missingQr ? 'QR үүсгэх явцад алдаа гарлаа. Та өөр аргаар оролдоно уу.' : 'Төлбөрийн мэдээлэл бэлдэж байна.'}</p>
@@ -537,11 +564,11 @@ export const QPayQrPrompt = ({ invoice, paymentState, isChecking, onCheck, onOpe
     );
 };
 
-export const QPayCancelPrompt = ({ onContinue, onConfirm }) => (
-    <PaymentPrompt id="qpay-cancel" title="Төлбөрийн урсгалыг цуцлах уу?" description="Захиалга сервер дээр шууд цуцлагдахгүй, хүчинтэй хугацаа дуусахад автоматаар дуусна." onClose={onContinue}>
+export const QPayCancelPrompt = ({ onContinue, onConfirm, isSubmitting = false }) => (
+    <PaymentPrompt id="qpay-cancel" title="Захиалгыг цуцлах уу?" onClose={isSubmitting ? () => {} : onContinue}>
         <div className="grid gap-3 sm:grid-cols-2">
-            <button type="button" onClick={onContinue} className="booking-cta-primary min-h-12 rounded-control px-4 py-2.5 text-sm leading-5 font-semibold">Үргэлжлүүлэн төлөх</button>
-            <button type="button" onClick={onConfirm} className="min-h-12 rounded-control border border-danger bg-surface px-4 py-2.5 text-sm leading-5 font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus">Цуцлах</button>
+            <button type="button" onClick={onContinue} disabled={isSubmitting} className="booking-cta-primary min-h-12 rounded-control px-4 py-2.5 text-sm leading-5 font-semibold disabled:opacity-50">Үргэлжлүүлэн төлөх</button>
+            <button type="button" onClick={onConfirm} disabled={isSubmitting} aria-busy={isSubmitting || undefined} className="min-h-12 rounded-control border border-danger bg-surface px-4 py-2.5 text-sm leading-5 font-semibold text-danger-text hover:bg-danger-surface focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? 'Цуцалж байна...' : 'Цуцлах'}</button>
         </div>
     </PaymentPrompt>
 );

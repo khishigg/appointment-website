@@ -26,10 +26,14 @@ export default function ClinicMarker({
             {clinic.bookingEnabled ? (
                 <Tooltip
                     permanent
+                    interactive
                     direction="top"
                     offset={[0, -8]}
                     opacity={1}
                     className="clinic-map-marker-label"
+                    eventHandlers={{
+                        click: () => onSelect?.(clinic),
+                    }}
                 >
                     {name}
                 </Tooltip>
